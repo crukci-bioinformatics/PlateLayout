@@ -1,17 +1,19 @@
 # PlateLayout
-Plate randomistation using R script MultiPlateLayoutBlockRandomised
-===================================================================
 
-usage:
-PlateLayoutRandomisation -d <designSheet> -o <outputFile> -b <batchColumnHeaders> -r <NumberOfRuns> -G -H 
+Plate randomistation using R script MultiPlateLayoutBlockRandomised  
 
-Options:
-    -d - <string>  - designSheet - Path to experimental design file - required
-    -o - <string>  - outputFileName - Output Filename prefix - optional
-    -b - <string>  - batchColumns - Columns to use to create additional plots for checking batch distributions - optional
-    -r - <integer> - runNumber - Number of times to run the script [default=1] - optional
-    -G - <FLAG>    - noGenomicsControls - do not reserve wells for Genomics controls - this is generally only used when the lab is doing the library prep rather than Genomics [default=FALSE] - optional
-    -H - Show help message and exit
+=========
+
+usage:  
+`PlateLayoutRandomisation -d <designSheet> -o <outputFile> -b <batchColumnHeaders> -r <NumberOfRuns> -G -H`
+
+Options:  
+>    -d - <*string*>  - designSheet - Path to experimental design file - **required**  
+>    -o - <*string*>  - outputFileName - Output Filename prefix - **optional**  
+>    -b - <*string*>  - batchColumns - Columns to use to create additional plots for checking batch distributions - **optional**  
+>    -r - <*integer*> - runNumber - Number of times to run the script [default=1] - **optional**  
+>    -G - <*FLAG*>    - noGenomicsControls - do not reserve wells for Genomics controls - this is generally only used when the lab is doing the library prep rather than Genomics [default=FALSE] - **optional**  
+>    -H - <*FLAG*> - Show help message and exit
 
 INTRODUCTION
 ============
@@ -21,23 +23,26 @@ Whenever the number of samples on a plate is not divisable by 8, the script will
 
 If there are more than 94 samples the script will generate layouts for multiple plates to accomodate all the samples - the last two wells on the 96 well plate are reserved for genomic controls. Samples will be randomly spread between the plates, ensuring even distribution of different sample groups to avoid batch effects. A pdf will be created with bar plots showing the distributions of Sample groups and replicates between the plates.
 
-If there are known batches or other factors of interest in the experiment (e.g. different extraction dates, sex etc.) the optimisation part of script is agnostic of these, but can optionally print out layout plots coloured according to these factors and, in the case of multi-plate experiments, additional bar plots showing the distribution of these characteristics across the plates. This is achieved by providing the "--batchColumns" option with a comma separated string of column headers for which plots are required e.g. "--batchColumns ExtractDate,Sex,PassageNumber". These plots can then be used to assess if the characteristics are evenly distributed across and between the plates or if the script needs to be re-run. 
+If there are known batches or other factors of interest in the experiment (e.g. different extraction dates, sex etc.) the optimisation part of script is agnostic of these, but can optionally print out layout plots coloured according to these factors and, in the case of multi-plate experiments, additional bar plots showing the distribution of these characteristics across the plates. This is achieved by providing the `-b` option with a comma separated string of column headers for which plots are required e.g. `-b ExtractDate,Sex,PassageNumber`. These plots can then be used to assess if the characteristics are evenly distributed across and between the plates or if the script needs to be re-run. 
 
-The "--runNumber" option allows you to run through the script multiple times to generate a number of different layouts to select from.
+The `-r` option allows you to run through the script multiple times to generate a number of different layouts to select from.
 
-The "--noGenomicsControls" will cause the script to not reserve wells for the genomics controls. These controls are added by Genomics in order to verify the library prep in cases where the sequecing has failed due to problems caused in sample preparation/extraction. 
+The `-G` will cause the script to not reserve wells for the genomics controls. These controls are added by Genomics in order to verify the library prep in cases where the sequecing has failed due to problems caused in sample preparation/extraction. 
 
 REQUIRMENTS
 ===========
-The following R packages are required:
-    dplyr
-    ggplot2
-    RColorBrewer
-    optparse
+An installation of R is required:  
+  [CRAN](https://cran.r-project.org/)
+  
+In addition, the following R packages are required:
+  * dplyr
+  * ggplot2
+  * RColorBrewer
+  * optparse
 
 INPUTS
 ======
-The input table should be a csv file with a minimum of three columns headed "SampleName", "SampleGroup" and "Replicate". Any additional columns will be ignored unless specified with "--batchColumns".
+The input table should be a csv file with a minimum of three columns headed "SampleName", "SampleGroup" and "Replicate". Any additional columns will be ignored unless specified with `-b`.
 
 OUTPUTS
 =======
@@ -49,29 +54,30 @@ PLATE LAYOUT PROCESS
 ====================
 The algorithm for randomising the plate layout is as follows:
 
-1) Randomise the order of the sample groups and the order of the replicates within each sample group:
+1. Randomise the order of the sample groups and the order of the replicates within each sample group:
     a) assign each sample group a random number from 1-nGroups
     b) assign each sample a random number from 1-nSamples
     c) sort the table by group and then sample
 
-2) Assign each sample to a plate
+2. Assign each sample to a plate
 
  for each plate...
 
-3) Add any genomics controls and water controls. Genomics controls are added to end of the table. Water controls are added randomly within the table.
+3. Add any genomics controls and water controls. Genomics controls are added to end of the table. Water controls are added randomly within the table.
 
-4) Assign each sample to a well by traversing the plate diagonally:
-    a) determine the number of columns that will be needed to accomodate all the samples on the plate
-    b) the first sample in the table is then assigned to A1, the second to B2 and so on. On reaching the final column continue the next row from column 1, and continue the next column from Row A when Row H has been reached. 
-       If a well has already been used, shift over 1 column - this is because the method hits problems if there is an even number of columns as the pattern cycles (e.g. with 8 columns, it would just keep using A1, B2, C3, D4, E5, F6, G7, H8)
-   The purpose of assigning wells in this way is to distribute the replicates from each sample group across the rows and the columns so that, as much as possible, replicates are not in the same row or column as others from the same sample group.
+4. Assign each sample to a well by traversing the plate diagonally:
+  1. determine the number of columns that will be needed to accomodate all the samples on the plate
+  2. the first sample in the table is then assigned to A1, the second to B2 and so on. On reaching the final column continue the next row from column 1, and continue the next column from Row A when Row H has been reached.
+    * If a well has already been used, shift over 1 column - this is because the method hits problems if there is an even number of columns as the pattern cycles (e.g. with 8 columns, it would just keep using A1, B2, C3, D4, E5, F6, G7, H8)
+    * The purpose of assigning wells in this way is to distribute the replicates from each sample group across the rows and the columns so that, as much as possible, replicates are not in the same row or column as others from the same sample group.
 
-5) Randomise rows and columns as blocks - this maintains the distribution of replicates relative to each other, but randomises the overall plate layout.
-    a) each row is assigned a randomn number from 1-8 and the rows are re-ordered according to this
-    b) each column is assigned a randomn number from 1-nColumns and the columns are ordered according to this
-    c) Genomics controls are switched with the samples in the last 1-2 wells (e.g. for 5 columns with wells E7 and E8 if there are two genomics controls)
+5. Randomise rows and columns as blocks - this maintains the distribution of replicates relative to each other, but randomises the overall plate layout.  
+     a. each row is assigned a randomn number from 1-8 and the rows are re-ordered according to this  
+     b. each column is assigned a randomn number from 1-nColumns and the columns are ordered according to this  
+     c. Genomics controls are switched with the samples in the last 1-2 wells (e.g. for 5 columns with wells E7 and E8 if there are two genomics controls)
 
     e.g. for 5 rows with 40 samples:
+    
         Step 4 ->
              1  17  33   9  25
             26   2  18  34  10
@@ -105,4 +111,5 @@ The algorithm for randomising the plate layout is as follows:
 TEST DATA
 =========
 
-The folder test contains 11 example design tables, which can be use to assess the behaviour of the script. The script file TestScript.sh contains some examples of how to use the various options for the script.
+The folder test contains 11 example design tables, which can be use to assess the behaviour of the script. The script file `TestScript.sh` contains some examples of how to use the various options for the script. Run `TestScript.sh` in a local directory to get example outputs.
+
