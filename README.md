@@ -1,6 +1,7 @@
 # PlateLayout
 
 Plate randomistation using R script MultiPlateLayoutBlockRandomised  
+Use the binary in the `bin` directory to access the script
 
 =========
 
