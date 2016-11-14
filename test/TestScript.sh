@@ -9,9 +9,11 @@ while [ -h "$SOURCE" ]; do # resolve $SOURCE until the file is no longer a symli
   [[ $SOURCE != /* ]] && SOURCE="$DIR/$SOURCE" # if $SOURCE was a relative symlink, we need to resolve it relative to the path where the symlink file was located
 done
 TestDIR="$( cd -P "$( dirname "$SOURCE" )" && pwd )"
+TestDIR=`readlink -f $TestDIR`
+
 
 # export binary file location
-BinaryDIR=${ScriptDIR/test/bin}/MultiPlateLayoutBlockRandomised.R
+BinaryDIR=${TestDIR/test/bin}
 export PATH=$BinaryDIR:$PATH
 
 # tests

@@ -1,12 +1,8 @@
-library(dplyr)
-library(ggplot2)
-library(RColorBrewer)
-library(optparse)
-
 # This script takes an experimental design table and generates a pseudo-block-randomised plate layout for it. It can cope with multiple plates - it will randomly spread the samples evenly between the plates. 
 # The input table should be a csv file with a minimum of three columns headed "SampleName", SampleGroup" and "Replicate". An optional "Batch" column may also be specified. Any additional columns will be ignored.
 # The outputs are one image file showing the plate layout, indicating both sample group and replicate number, and a table with the layout. The output table will include all the data in the input table, plus 3 or 4 additional columns indicating the plate number (if multiple plates), the row of the well (A-H), the column of the well (1-12) and the coordinate of the well (A1, A2...H7,H8)
 
+library(optparse)
 
 #Input options
 options_list <- list(
@@ -30,6 +26,9 @@ genCtrls <- opts$genCtrls
 if(outputFile == "<undefined>") { outputFile <- gsub("[[:alnum:]]*$", "PlateLayout", basename(designFile)) }
 
 #########################################################################################################
+## FUNCTIONS
+#########################################################################################################
+
 # Randomise order of rows or columns
 randBlock <- function(x){
   randomOrder=sample(1:max(x))
@@ -87,7 +86,15 @@ multiplatePlot <- function(plotDat, batches){
     }
   }
 }
-##################################################################################
+#########################################################################################################
+## MAIN SCRIPT
+#########################################################################################################
+
+library(dplyr)
+library(ggplot2)
+library(RColorBrewer)
+
+
 runID <- ""
 # run the script as many times as requested
 for(attemptNumber in 1:runNumber){
@@ -149,10 +156,12 @@ for(attemptNumber in 1:runNumber){
   
   
   ###################
-  #order the factor level of the sample groups. Add water and genomics controls to the factor levels for compatibility with the data frames for these that we may bind later
+  #order the factor level of the sample groups. Add water and genomics controls to the factor levels for compatibility with the data frames for these that we may bind later. Also change the replicate column to character.
   groupsList <- unique(dat$SampleGroup)
   groupsList <- groupsList[order(groupsList)]
-  dat <- mutate(dat, SampleGroup=factor(SampleGroup, levels=c(groupsList, "Water", "GenomicsControl")))
+  dat <- mutate(dat, SampleGroup=factor(SampleGroup, levels=c(groupsList, "Water", "GenomicsControl"))) %>% 
+      mutate(Replicate=as.character(Replicate))
+      #mutate(Replicate=factor(Replicate, levels=c(unique(plateDat$Replicate), "")))
   
   #change any additional batch columns into factors including levels for the water and genomics controls which may be added later
   if(batchColumns!="<undefined>"){
@@ -221,7 +230,8 @@ for(attemptNumber in 1:runNumber){
       pseudoSamplesTab <- tbl_df(data.frame(SampleGroup=pseudoSamples, 
                                          SampleName=pseudoSamples, 
                                          SampleIndex=waterWells,
-                                         Replicate=1:nWater,
+                                         Replicate=as.character(rep("", nWater)),
+                                         #Replicate=factor(rep("", nWater), levels=c(unique(plateDat$Replicate), "")),
                                          PlateNumber=rep(thisPlateNumber, nWater)
                               ))
       #add batch columns if necessary
@@ -253,7 +263,8 @@ for(attemptNumber in 1:runNumber){
       pseudoSamplesTab <- tbl_df(data.frame(SampleGroup=pseudoSamples, 
                                          SampleName=pseudoSamples, 
                                          SampleIndex=GCWells,
-                                         Replicate=1:nGenomicControls,
+                                         Replicate=rep("", nGenomicControls),
+                                         #Replicate=factor(rep("", nGenomicControls), levels=c(unique(plateDat$Replicate, ""))),
                                          PlateNumber=rep(thisPlateNumber, nGenomicControls)
       ))
       #add batch columns if necessary
