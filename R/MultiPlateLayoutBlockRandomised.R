@@ -300,8 +300,8 @@ for(attemptNumber in 1:runNumber){
       GCrows <- which(plateDat$Column==NumberOfColumns&plateDat$Row>(8-nGenomicControls))
       areGC <- which(plateDat$SampleName=="GenomicsControl")
       #if any are already in the right place, remove them
-      GCrows <- GCrows[!GCRows%in%areGC]
-      areGC <- areGC[!areGC%in%GCRows]
+      GCrows <- GCrows[!GCrows%in%areGC]
+      areGC <- areGC[!areGC%in%GCrows]
       #adjust the row and columns accordingly
       plateDat <- plateDat %>% 
         mutate(NewRow=Row) %>% 
