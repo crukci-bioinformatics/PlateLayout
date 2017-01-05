@@ -89,6 +89,7 @@ multiplatePlot <- function(plotDat, batches){
 #########################################################################################################
 ## MAIN SCRIPT
 #########################################################################################################
+options(warn=2)
 
 library(dplyr)
 library(ggplot2)
@@ -98,8 +99,10 @@ library(RColorBrewer)
 runID <- ""
 # run the script as many times as requested
 for(attemptNumber in 1:runNumber){
-  
-  if(runNumber>1) { runID <- paste(".Run", attemptNumber, sep="") }
+  if(runNumber>1) {
+    cat(paste("Run Number:", attemptNumber, "\n"))
+    runID <- paste(".Run", attemptNumber, sep="") 
+  }
   
   # Get sample data
   dat <- read.csv(designFile, stringsAsFactors=F) %>% 
@@ -297,11 +300,11 @@ for(attemptNumber in 1:runNumber){
     
     #finally switch the Genomics controls with the end wells if necessary
     if(nGenomicControls>0){
-      GCrows <- which(plateDat$Column==NumberOfColumns&plateDat$Row>(8-nGenomicControls))
-      areGC <- which(plateDat$SampleName=="GenomicsControl")
+      GCRows <- which(plateDat$Column==NumberOfColumns&plateDat$Row>(8-nGenomicControls))
+      AreGC <- which(plateDat$SampleName=="GenomicsControl")
       #if any are already in the right place, remove them
-      GCrows <- GCrows[!GCrows%in%areGC]
-      areGC <- areGC[!areGC%in%GCrows]
+      GCrows <- GCRows[!GCRows%in%AreGC]
+      areGC <- AreGC[!AreGC%in%GCRows]
       #adjust the row and columns accordingly
       plateDat <- plateDat %>% 
         mutate(NewRow=Row) %>% 
