@@ -14,14 +14,14 @@ Options:
     -d - <string>  - designSheet - Path to experimental design file - required
     -o - <string>  - outputFileName - Output Filename prefix - optional
     -b - <string>  - batchColumns - Columns to use to create additional plots for checking batch distributions - optional
-    -r - <integer> - runNumber - Number of times to run the script [default=1] - optional
+    -w - <integer> - maxWells - Maximum number of wells to use on the plate [default=96] - optional
     -G - <FLAG>    - noGenomicsControls - do not reserve wells for Genomics controls - this generally only used when the lab is doing the library prep rather than Genomics [default=FALSE] - optional
     -H - Show this help message and exit
 
 "
 
 #get arguments
-while getopts d:o:b:r:GH opt; do
+while getopts d:o:b:w:GH opt; do
     case "$opt" in
         d) designSheet="$OPTARG";;
         H) echo "$usage"; exit;;
@@ -40,13 +40,14 @@ fi
 # locate R script
 
 SOURCE="${BASH_SOURCE[0]}"
-while [ -h "$SOURCE" ]; do # resolve $SOURCE until the file is no longer a symlink
-  DIR="$( cd -P "$( dirname "$SOURCE" )" && pwd )"
-  SOURCE="$(readlink "$SOURCE")"
-  [[ $SOURCE != /* ]] && SOURCE="$DIR/$SOURCE" # if $SOURCE was a relative symlink, we need to resolve it relative to the path where the symlink file was located
+while [ -h "$source" ]; do # resolve $source until the file is no longer a symlink
+  dir="$( cd -p "$( dirname "$source" )" && pwd )"
+  source="$(readlink "$source")"
+  [[ $source != /* ]] && source="$dir/$source" # if $source was a relative symlink, we need to resolve it relative to the path where the symlink file was located
 done
 ScriptDIR="$( cd -P "$( dirname "$SOURCE" )" && pwd )"
 ScriptFile=${ScriptDIR/bin/R}/MultiPlateLayoutBlockRandomised.R
+ScriptFile=~/Scripts/PlateLayout/R/MultiPlateLayoutBlockRandomised.R
 
 # check R installed
 hash Rscript 2>/dev/null || { echo >&2 "I require R but it doesn't appear to be not installed, or is not on the PATH.  Aborting."; exit 1; }
