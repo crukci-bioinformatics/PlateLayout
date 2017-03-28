@@ -1,5 +1,5 @@
 # This script takes an experimental design table and generates a pseudo-block-randomised plate layout for it. It can cope with multiple plates - it will randomly spread the samples evenly between the plates. 
-# The input table should be a csv file with a minimum of three columns headed "SampleName", SampleGroup" and "Replicate". An optional "Batch" column may also be specified. Any additional columns will be ignored.
+# The input table should be a csv file with a minimum of three columns headed "SampleName", SampleGroup" and "Replicate". Any additional columns will be ignored.
 # If the samples are to be spread across multiple plates you can include a "PlateNumber" column, and manually assign the samples to specific plates.
 # The outputs are one image file showing the plate layout, indicating both sample group and replicate number, and a table with the layout. The output table will include all the data in the input table, plus 3 or 4 additional columns indicating the plate number (if multiple plates), the row of the well (A-H), the column of the well (1-12) and the coordinate of the well (A1, A2...H7,H8)
 
