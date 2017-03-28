@@ -3,7 +3,7 @@
 Plate randomistation using R script MultiPlateLayoutBlockRandomised  
 Use the shell script in the `bin` directory to access the script
 
-=========
+----
 
 usage:  
 `PlateLayoutRandomisation -d <designSheet> -o <outputFile> -b <batchColumnHeaders> -r <NumberOfRuns> -G -H`
@@ -11,9 +11,8 @@ usage:
 Options:  
 >    -d - <*string*>  - designSheet - Path to experimental design file - **required**  
 >    -o - <*string*>  - outputFileName - Output Filename prefix - **optional**  
->    -b - <*string*>  - batchColumns - Columns to use to create additional plots for checking batch distributions - **optional**
->    -w - <*integer*> - maxWells - Maximum number of wells to use on the plate [default=96] - **optional**
-
+>    -b - <*string*>  - batchColumns - Columns to use to create additional plots for checking batch distributions - **optional**  
+>    -w - <*integer*> - maxWells - Maximum number of wells to use on the plate [default=96] - **optional**  
 >    -G - <*FLAG*>    - noGenomicsControls - do not reserve wells for Genomics controls - this is generally only used when the lab is doing the library prep rather than Genomics [default=FALSE] - **optional**  
 >    -H - <*FLAG*> - Show help message and exit
 
@@ -72,18 +71,18 @@ The algorithm for randomising the plate layout is as follows:
 
 3. Add any genomics controls and water controls. Genomics controls are added to end of the table. Water controls are added randomly within the table.
 
-4. Assign each sample to a well by traversing the plate diagonally:
-  1. determine the number of columns that will be needed to accomodate all the samples on the plate
-  2. the first sample in the table is then assigned to A1, the second to B2 and so on. On reaching the final column continue the next row from column 1, and continue the next column from Row A when Row H has been reached.
-    * If a well has already been used, shift over 1 column - this is because the method hits problems if there is an even number of columns as the pattern cycles (e.g. with 8 columns, it would just keep using A1, B2, C3, D4, E5, F6, G7, H8)
-    * The purpose of assigning wells in this way is to distribute the replicates from each sample group across the rows and the columns so that, as much as possible, replicates are not in the same row or column as others from the same sample group.
+4. Assign each sample to a well by traversing the plate diagonally:  
+   i. determine the number of columns that will be needed to accomodate all the samples on the plate  
+  ii. the first sample in the table is then assigned to A1, the second to B2 and so on. On reaching the final column continue the next row from column 1, and continue the next column from Row A when Row H has been reached.  
+    * If a well has already been used, shift over 1 column - this is because the method hits problems if there is an even number of columns as the pattern cycles (e.g. with 8 columns, it would just keep using A1, B2, C3, D4, E5, F6, G7, H8)  
+    * The purpose of assigning wells in this way is to distribute the replicates from each sample group across the rows and the columns so that, as much as possible, replicates are not in the same row or column as others from the same sample group.  
 
 ### Randomisation
 
-5. Randomise rows and columns as blocks - this maintains the distribution of replicates relative to each other, but randomises the overall plate layout.  
-     a. each row is assigned a randomn number from 1-8 and the rows are re-ordered according to this  
-     b. each column is assigned a randomn number from 1-nColumns and the columns are ordered according to this  
-     c. Genomics controls are switched with the samples in the last 1-2 wells (e.g. for 5 columns with wells E7 and E8 if there are two genomics controls)
+5. Randomise rows and columns as blocks - this maintains the distribution of replicates relative to each other, but randomises the overall plate layout.
+  i. each row is assigned a randomn number from 1-8 and the rows are re-ordered according to this
+  ii. each column is assigned a randomn number from 1-nColumns and the columns are ordered according to this
+  iii. Genomics controls are switched with the samples in the last 1-2 wells (e.g. for 5 columns with wells E7 and E8 if there are two genomics controls)
 
     e.g. for 5 rows with 40 samples:
     
@@ -97,7 +96,7 @@ The algorithm for randomising the plate layout is as follows:
             31   7  23  39  15
             16  32   8  24  40
 
-        Step 5a ->
+        Step 5i ->
             31   7  23  39  15
             11  27   3  19  35
             21  37  13  29   5
@@ -107,7 +106,7 @@ The algorithm for randomising the plate layout is as follows:
             26   2  18  34  10
              6  22  38  14  30
 
-        Step 5b ->
+        Step 5ii ->
             39  31  23  15   7
             19  11   3  35  27
             29  21  13   5  37
@@ -125,17 +124,17 @@ The algorithm for randomising the plate layout is as follows:
                                     Score 2 for each sample in the four adjacent wells that of the sample group
                                     Score 1 for each sample in the six next nearest wells
                                     
-                                    ---------------------
+                                    |---|---|---|---|---|
                                     |   |   | 1 |   |   |
-                                    ---------------------
+                                    |---|---|---|---|---|
                                     |   | 1 | 2 | 1 |   |
-                                    ---------------------
+                                    |---|---|---|---|---|
                                     | 1 | 2 | X | 2 | 1 |
-                                    ---------------------
+                                    |---|---|---|---|---|
                                     |   | 1 | 2 | 1 |   |
-                                    ---------------------
+                                    |---|---|---|---|---|
                                     |   |   | 1 |   |   |
-                                    ---------------------
+                                    |---|---|---|---|---|
                     
 7. The randomisation process is carried out 10000 times and the layout with the lowest "distribution score" is accepted.
 
