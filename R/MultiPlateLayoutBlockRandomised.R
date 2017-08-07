@@ -370,14 +370,12 @@ for(thisPlateNumber in 1:NumberOfPlates){
             waterWells <- rep(sample(0:nSamples, 1)+0.75, nWater)
             
             #Generate a dataframe for the water controls
-            pseudoSamples <- rep("Water", nWater)
-            pseudoSamples <- factor(pseudoSamples, levels=c(groupsList, "Water", "GenomicsControl"))
-            pseudoSamplesTab <- tbl_df(data.frame(SampleGroup=pseudoSamples, 
-                                                  SampleName=pseudoSamples, 
+            pseudoSamplesTab <- tbl_df(data.frame(SampleGroup=factor("Water", levels=c(groupsList, "Water", "GenomicsControl")), 
+                                                  SampleName="Water", 
                                                   SampleIndex=waterWells,
-                                                  Replicate=as.character(rep("", nWater)),
-                                                  #Replicate=factor(rep("", nWater), levels=c(unique(plateDat$Replicate), "")),
-                                                  PlateNumber=rep(thisPlateNumber, nWater)
+                                                  Replicate="",
+                                                  PlateNumber=rep(thisPlateNumber, nWater), 
+                                                  stringsAsFactors = F
             ))
             #add batch columns if necessary
             if(BatchColumns!="<undefined>"){
@@ -405,12 +403,12 @@ for(thisPlateNumber in 1:NumberOfPlates){
             #Generate a dataframe for the Genomics Controls
             pseudoSamples <-rep("GenomicsControl", nGenomicControls)
             pseudoSamples <- factor(pseudoSamples, levels=c(groupsList, "Water", "GenomicsControl"))
-            pseudoSamplesTab <- tbl_df(data.frame(SampleGroup=pseudoSamples, 
-                                                  SampleName=pseudoSamples, 
+            pseudoSamplesTab <- tbl_df(data.frame(SampleGroup=factor("GenomicsControl", levels=c(groupsList, "Water", "GenomicsControl")),
+                                                  SampleName="GenomicsControl", 
                                                   SampleIndex=GCWells,
-                                                  Replicate=rep("", nGenomicControls),
-                                                  #Replicate=factor(rep("", nGenomicControls), levels=c(unique(plateDat$Replicate, ""))),
-                                                  PlateNumber=rep(thisPlateNumber, nGenomicControls)
+                                                  Replicate="",
+                                                  PlateNumber=rep(thisPlateNumber, nGenomicControls),
+                                                  stringsAsFactors = F
             ))
             #add batch columns if necessary
             if(BatchColumns!="<undefined>"){
