@@ -277,12 +277,14 @@ message("Number of columns used on each plate: ", paste(ColumnsOnEachPlate, coll
 message("Number of samples on each plate: ", paste(SamplesOnEachPlate, collapse=","))
 
 #if the samples will fit on a single plate then assign all samples to "1", otherwise we need to optimise the distribution of the samples across the plates according to the different "batch" factors
+message("Assign samples to Plates")
 if(!"PlateNumber"%in%colnames(dat)&NumberOfPlates==1){
     dat$PlateNumber <- 1
 }else if(!"PlateNumber"%in%colnames(dat)&NumberOfPlates>1){
     #### distribute across multiple plates
     dat <- distributeSamples(dat, BatchColumns, SamplesOnEachPlate)
 }
+message("\tDone")
 
 ###################
 #order the factor level of the sample groups. Add water and genomics controls to the factor levels for compatibility with the data frames for these that we may bind later. Also change the replicate column to character.
@@ -301,7 +303,6 @@ if(BatchColumns!="<undefined>"){
     }
 }
 ###################
-message(dat$PlateNumber)
 
 # create a data frame to contain all plates for final the output
 tabout <- tbl_df(data.frame())
@@ -310,7 +311,7 @@ tabout <- tbl_df(data.frame())
 runNumber <- 10000
 plateID <- ""
 for(thisPlateNumber in 1:NumberOfPlates){
-    
+    message("Randomize Plate ", thisPlateNumber)
     if(NumberOfPlates>1) plateID <- paste(".Plate", thisPlateNumber, sep="_")
     # The plate layout algorithm first optimises for sample group and then randomises the rows and columns. In 
     # order to ensure the other "batch" factors are not spatially biased we will run this process a number of times
@@ -371,13 +372,13 @@ for(thisPlateNumber in 1:NumberOfPlates){
             
             #Generate a dataframe for the water controls
             pseudoSamples <- rep("Water", nWater)
-            pseudoSamples <- factor(pseudoSamples, levels=c(groupsList, "Water", "GenomicsControl"))
-            pseudoSamplesTab <- tbl_df(data.frame(SampleGroup=pseudoSamples, 
+            pseudoSamplesTab <- tbl_df(data.frame(SampleGroup=factor(pseudoSamples, levels=c(groupsList, "Water", "GenomicsControl")), 
                                                   SampleName=pseudoSamples, 
                                                   SampleIndex=waterWells,
                                                   Replicate=as.character(rep("", nWater)),
                                                   #Replicate=factor(rep("", nWater), levels=c(unique(plateDat$Replicate), "")),
-                                                  PlateNumber=rep(thisPlateNumber, nWater)
+                                                  PlateNumber=rep(thisPlateNumber, nWater),
+                                                  stringsAsFactors = F
             ))
             #add batch columns if necessary
             if(BatchColumns!="<undefined>"){
@@ -404,13 +405,13 @@ for(thisPlateNumber in 1:NumberOfPlates){
             
             #Generate a dataframe for the Genomics Controls
             pseudoSamples <-rep("GenomicsControl", nGenomicControls)
-            pseudoSamples <- factor(pseudoSamples, levels=c(groupsList, "Water", "GenomicsControl"))
-            pseudoSamplesTab <- tbl_df(data.frame(SampleGroup=pseudoSamples, 
+            pseudoSamplesTab <- tbl_df(data.frame(SampleGroup=factor(pseudoSamples, levels=c(groupsList, "Water", "GenomicsControl")), 
                                                   SampleName=pseudoSamples, 
                                                   SampleIndex=GCWells,
                                                   Replicate=rep("", nGenomicControls),
                                                   #Replicate=factor(rep("", nGenomicControls), levels=c(unique(plateDat$Replicate, ""))),
-                                                  PlateNumber=rep(thisPlateNumber, nGenomicControls)
+                                                  PlateNumber=rep(thisPlateNumber, nGenomicControls),
+                                                  stringsAsFactors = F
             ))
             #add batch columns if necessary
             if(BatchColumns!="<undefined>"){
