@@ -1,17 +1,31 @@
 # This script takes an experimental design table and generates a pseudo-block-randomised plate layout for it. It can cope with multiple plates - it will randomly spread the samples evenly between the plates. 
 # The input table should be a csv file with a minimum of three columns headed "SampleName", SampleGroup" and "Replicate". Any additional columns will be ignored.
+# Do not add  "SampleName", SampleGroup" or "Replicate" as batch columns, these will automatically be included
 # If the samples are to be spread across multiple plates you can include a "PlateNumber" column, and manually assign the samples to specific plates.
 # The outputs are one image file showing the plate layout, indicating both sample group and replicate number, and a table with the layout. The output table will include all the data in the input table, plus 3 or 4 additional columns indicating the plate number (if multiple plates), the row of the well (A-H), the column of the well (1-12) and the coordinate of the well (A1, A2...H7,H8)
 
 library(optparse)
+suppressPackageStartupMessages(library(dplyr))
+library(ggplot2)
+library(RColorBrewer)
 
 #Input options
 options_list <- list(
-    make_option(c('--designSheet', '-d'), type='character', help="Path to experimental design file - required", dest="designSheet", default="<undefined>"),
-    make_option(c('--output', '-o'), type='character', help="Output Filename - optional", dest="outputFile", default="<undefined>"),
-    make_option(c('--batchColumns', '-b'), type='character', help="Column to be plotted in multiplate experiments", dest="batCol", default="<undefined>"),
-    make_option(c('--maxWells', '-w'), type='integer', help="The maximum number of wells to use per plate", dest="maxWells", default="96"),
-    make_option(c('--noGenomicsControls', '-G'), action="store_false", default=TRUE, help="Do not add Genomics controls (generally only used when the lab is doing the library prep rather than Genomics)", dest="genCtrls")
+    make_option(c('--designSheet', '-d'), type='character', 
+                help="Path to experimental design file - required", dest="designSheet", 
+                default="<undefined>"),
+    make_option(c('--output', '-o'), type='character', help="Output Filename - optional", 
+                dest="outputFile", default="<undefined>"),
+    make_option(c('--batchColumns', '-b'), type='character', 
+                help="Column to be plotted in multiplate experiments", dest="batCol", 
+                default="<undefined>"),
+    make_option(c('--maxWells', '-w'), type='integer', 
+                help="The maximum number of wells to use per plate", dest="maxWells", default="96"),
+    make_option(c('--numRuns', '-n'), type='integer', 
+                help="The number of random distributions to test", dest="numRuns", default="10000"),
+    make_option(c('--noGenomicsControls', '-G'), action="store_false", default=TRUE, 
+                help="Do not add Genomics controls (generally only used when the lab is doing the 
+                library prep rather than Genomics)", dest="genCtrls")
 )
 
 #read options
@@ -22,9 +36,13 @@ outputFile <- opts$outputFile
 BatchColumns <- opts$batCol
 WellsInOnePlate <- opts$maxWells
 genCtrls <- opts$genCtrls
+numRuns <- opts$numRuns
 
 # set options that that have not beem provided
 if(outputFile == "<undefined>") { outputFile <- gsub("[[:alnum:]]*$", "PlateLayout", basename(designFile)) }
+
+# split BatchColumns
+BatchColumns <- strsplit(BatchColumns, ",")[[1]]
 
 #########################################################################################################
 ## FUNCTIONS
@@ -68,15 +86,15 @@ getSamplesPerPlate <- function(numberOfSamples, columnsOnEachPlate, wellsInOnePl
 }
 
 # determine the distribution of samples across multiple plates
-distributeSamples <- function(datTab, batchColumns, samplesOnEachPlate){
+distributeSamples <- function(datTab, batchColumns, samplesOnEachPlate, numRuns){
 
     # The algorithm to assign the samples to multiple plates contains two random elements. 
     # We will run it multiple times and assess which results in the most even distribution of the "batch" factors
-    repTests <- 10000 #The number of test we will do
+    repTests <- numRuns #The number of test we will do
     # names of columns to test
     testColumns <- "SampleGroup" # we will always assess at least the SampleGroup column
-    if(batchColumns!="<undefined>"){
-        testColumns <- c(testColumns, strsplit(batchColumns, ",")[[1]])
+    if(any(batchColumns!="<undefined>")){
+        testColumns <- c(testColumns, batchColumns)
     }
     # output matrix of the distribution statitics for each factor for each test
     distrFactors <- matrix(nc=length(testColumns), nr=repTests)
@@ -86,6 +104,11 @@ distributeSamples <- function(datTab, batchColumns, samplesOnEachPlate){
     listOrderOfSamples <- list()
     listSamplePlateAssignment <- list()
     for(i in 1:repTests){
+        
+        if(i>1){ cat(paste(rep("\b", nchar(mess)), collapse = "")) }
+        mess <- paste0("\tTesting random sample distributions: ", i, "/", repTests)
+        cat(mess)
+        
         # Generate a vector to bind to the sample table that will assign each sample to a plate. 
         # This is organised to distribute the sample groups as evenly as possible across the plates.
         minSam <- min(samplesOnEachPlate)
@@ -112,6 +135,7 @@ distributeSamples <- function(datTab, batchColumns, samplesOnEachPlate){
         listOrderOfSamples[[i]] <- orderOfSamples
         listSamplePlateAssignment[[i]] <- samplePlateAssignment
     }
+    cat("\n")
     
     # Select the optimum distribution
     minFactors <- apply(distrFactors, 2, min)
@@ -198,8 +222,7 @@ multiplatePlot <- function(plotDat, batches){
     
     #plot the distribution of other requested factors across plates
     if(batches!="<undefined>"){
-        allbatches <- strsplit(batches, ",")[[1]]
-        for(colName in allbatches){
+        for(colName in batches){
             colNamePlot <- ggplot(plotDat, aes_string(x=colName, fill="PlateNumber"))+
                 geom_bar(position="dodge")+
                 theme(axis.text.x=element_text(angle=90))+
@@ -230,13 +253,30 @@ testPlot <- function(plotDat, conditionToPlot, boxColCodes){
 #########################################################################################################
 options(warn=2)
 
-library(dplyr)
-library(ggplot2)
-library(RColorBrewer)
-
 # Get sample data
 dat <- read.csv(designFile, stringsAsFactors=F) %>% 
     tbl_df()
+
+# Check that all batch columns are correct
+if(any(BatchColumns!="<undefined>")){
+    if(any(c("SampleGroup", "Replicate")%in%BatchColumns)){
+        message("WARNING: There is no need to include SampleGroup or Replicate as batch columns")
+        BatchColumns <- BatchColumns[!BatchColumns%in%c("SampleGroup", "Replicate")]
+    }
+    noCol <- BatchColumns[!BatchColumns%in%colnames(dat)]
+    if(length(noCol)>0){
+        message("ERROR: The following columns are not in the table:")
+        message("\t", paste(noCol, collapse=" "))
+        quit(status = 1)
+    }
+    for(checCol in BatchColumns){
+        if(all(dat[,checCol]==""|is.na(dat[,checCol]))){
+            message("ERROR: The batch column ", checCol, " does not contain any information.")
+            quit(status = 1)
+        }
+    }
+    if(length(BatchColumns)==0){ BatchColumns <- "<undefined>" }
+}
 
 ##Figure out the number of samples on each plate
 
@@ -277,14 +317,13 @@ message("Number of columns used on each plate: ", paste(ColumnsOnEachPlate, coll
 message("Number of samples on each plate: ", paste(SamplesOnEachPlate, collapse=","))
 
 #if the samples will fit on a single plate then assign all samples to "1", otherwise we need to optimise the distribution of the samples across the plates according to the different "batch" factors
-message("Assign samples to Plates")
 if(!"PlateNumber"%in%colnames(dat)&NumberOfPlates==1){
     dat$PlateNumber <- 1
 }else if(!"PlateNumber"%in%colnames(dat)&NumberOfPlates>1){
+    message("Assign samples to Plates:")
     #### distribute across multiple plates
-    dat <- distributeSamples(dat, BatchColumns, SamplesOnEachPlate)
+    dat <- distributeSamples(dat, BatchColumns, SamplesOnEachPlate, numRuns)
 }
-message("\tDone")
 
 ###################
 #order the factor level of the sample groups. Add water and genomics controls to the factor levels for compatibility with the data frames for these that we may bind later. Also change the replicate column to character.
@@ -295,9 +334,8 @@ dat <- dat %>%
     mutate(Replicate=as.character(Replicate))
 
 #change any additional batch columns into factors including levels for the water and genomics controls which may be added later
-if(BatchColumns!="<undefined>"){
-    allbatches <- strsplit(BatchColumns, ",")[[1]]
-    for(colName in allbatches){
+if(any(BatchColumns!="<undefined>")){
+    for(colName in BatchColumns){
         dat[,colName] <- as.factor(unlist(dat[,colName]))
         levels(dat[[colName]]) <- c(levels(dat[[colName]]),  "Water", "GenomicsControl")
     }
@@ -308,7 +346,7 @@ if(BatchColumns!="<undefined>"){
 tabout <- tbl_df(data.frame())
 
 # randomise each plate
-runNumber <- 10000
+runNumber <- numRuns
 plateID <- ""
 for(thisPlateNumber in 1:NumberOfPlates){
     message("Randomize Plate ", thisPlateNumber)
@@ -317,8 +355,8 @@ for(thisPlateNumber in 1:NumberOfPlates){
     # order to ensure the other "batch" factors are not spatially biased we will run this process a number of times
     # and then keep the one with the best distribution of samples
     testColumns <- "SampleGroup" # we will always assess at least the SampleGroup column
-    if(BatchColumns!="<undefined>"){
-        testColumns <- c(testColumns, strsplit(BatchColumns, ",")[[1]])
+    if(any(BatchColumns!="<undefined>")){
+        testColumns <- c(testColumns, BatchColumns)
     }
     layoutScoreTab <- matrix(nc=length(testColumns), nr=runNumber)
     colnames(layoutScoreTab) <- testColumns
@@ -326,7 +364,11 @@ for(thisPlateNumber in 1:NumberOfPlates){
     
     for(thisRun in 1:runNumber){
         
-        cat(paste("Plate", thisPlateNumber, "Run Number:", thisRun, "\n"))
+        if(thisRun>1){ cat(paste(rep("\b", nchar(mess)), collapse = "")) }
+        mess <- paste0("Plate ", thisPlateNumber, " Run Number: ", thisRun, "/", runNumber)
+        cat(mess)
+        
+        #cat(paste("Plate", thisPlateNumber, "Run Number:", thisRun, "\n"))
         #subset the sample data for this plate
         plateDat <- filter(dat, PlateNumber==thisPlateNumber)
         
@@ -381,12 +423,13 @@ for(thisPlateNumber in 1:NumberOfPlates){
                                                   stringsAsFactors = F
             ))
             #add batch columns if necessary
-            if(BatchColumns!="<undefined>"){
-                allbatches <- strsplit(BatchColumns, ",")[[1]]
-                temp <- as.data.frame(matrix("Water", nr=nrow(pseudoSamplesTab), nc=length(allbatches)))
-                for(colName in 1:ncol(temp)){temp[,colName] <- factor(temp[,colName], levels=levels(plateDat[[match(allbatches[colName], colnames(plateDat))]]))}
-                colnames(temp) <- allbatches
-                pseudoSamplesTab <- cbind(pseudoSamplesTab, temp)
+            if(any(BatchColumns!="<undefined>")){
+                temp <- as.data.frame(matrix("Water", nr=nrow(pseudoSamplesTab), nc=length(BatchColumns)))
+                for(colName in 1:ncol(temp)){
+                    temp[,colName] <- factor(temp[,colName], levels=levels(plateDat[[match(BatchColumns[colName], colnames(plateDat))]]))
+                    }
+                colnames(temp) <- BatchColumns
+                pseudoSamplesTab <- bind_cols(pseudoSamplesTab, temp)
             }
             #bind and sort the two data frames
             plateDat <- plateDat %>% 
@@ -414,12 +457,11 @@ for(thisPlateNumber in 1:NumberOfPlates){
                                                   stringsAsFactors = F
             ))
             #add batch columns if necessary
-            if(BatchColumns!="<undefined>"){
-                allbatches <- strsplit(BatchColumns, ",")[[1]]
-                temp <- as.data.frame(matrix("GenomicsControl", nr=nrow(pseudoSamplesTab), nc=length(allbatches)))
-                for(colName in 1:ncol(temp)){temp[,colName] <- factor(temp[,colName], levels=levels(plateDat[[match(allbatches[colName], colnames(plateDat))]]))}
-                colnames(temp) <- allbatches
-                pseudoSamplesTab <- cbind(pseudoSamplesTab, temp)
+            if(any(BatchColumns!="<undefined>")){
+                temp <- as.data.frame(matrix("GenomicsControl", nr=nrow(pseudoSamplesTab), nc=length(BatchColumns)))
+                for(colName in 1:ncol(temp)){temp[,colName] <- factor(temp[,colName], levels=levels(plateDat[[match(BatchColumns[colName], colnames(plateDat))]]))}
+                colnames(temp) <- BatchColumns
+                pseudoSamplesTab <- bind_cols(pseudoSamplesTab, temp)
             }
             #bind and sort the two data frames
             plateDat <- plateDat %>% 
@@ -467,14 +509,16 @@ for(thisPlateNumber in 1:NumberOfPlates){
         }
         layoutList[[thisRun]] <- plateDat[order(plateDat$SampleName),c("Row", "Column")]
     }
+    cat("\n") 
     
-   write.csv(layoutScoreTab, paste(outputFile, plateID, ".PlateDistribution.csv", sep=""), row.names = F, quote=F)
-   layoutScoreTab <- apply(layoutScoreTab, 2, function(x){x/mean(x)})
-   finalScores <- rowSums(layoutScoreTab)
-   whiBest <- which.min(finalScores)
-   plateDat <- plateDat[order(plateDat$SampleName),]
-   plateDat$Row <- layoutList[[whiBest]]$Row
-   plateDat$Column <- layoutList[[whiBest]]$Column
+    message("Output tables and plots for Plate ", thisPlateNumber)
+    write.csv(layoutScoreTab, paste(outputFile, plateID, ".PlateDistribution.csv", sep=""), row.names = F, quote=F)
+    layoutScoreTab <- apply(layoutScoreTab, 2, function(x){x/mean(x)})
+    finalScores <- rowSums(layoutScoreTab)
+    whiBest <- which.min(finalScores)
+    plateDat <- plateDat[order(plateDat$SampleName),]
+    plateDat$Row <- layoutList[[whiBest]]$Row
+    plateDat$Column <- layoutList[[whiBest]]$Column
     
     # plot the plate layout and save
     #generate a colour coding for plotting to keep consistency across different plates
@@ -488,14 +532,13 @@ for(thisPlateNumber in 1:NumberOfPlates){
     plotWidth <- (1.1*NumberOfColumns)+(max(nchar(groupsList))*0.075)+0.15
     ggsave(paste(outputFile, plateID, ".png", sep=""), height = 5, width=plotWidth)  
 
-    if(BatchColumns!="<undefined>"){
-        allbatches <- strsplit(BatchColumns, ",")[[1]]
+    if(any(BatchColumns!="<undefined>")){
         #generate a colour coding for plotting each batch to keep consistency across different plates
         if(thisPlateNumber==1){ 
-            colCodesBatches <- vector("list", length(allbatches)) 
-            names(colCodesBatches) <- allbatches
+            colCodesBatches <- vector("list", length(BatchColumns)) 
+            names(colCodesBatches) <- BatchColumns
         }
-        for(colName in allbatches){
+        for(colName in BatchColumns){
             if(thisPlateNumber==1){
                 colCodesBatches[[colName]] <- colorRampPalette(brewer.pal(12,"Set3"))(length(levels(plateDat[[colName]]))-2)
                 if(nWater>0) colCodesBatches[[colName]] <- c(colCodesBatches[[colName]], "#0000FF")
@@ -527,12 +570,12 @@ if(NumberOfPlates==1) dat <- select(dat, -PlateNumber)
 #write the final output table
 write.csv(tabout, paste(outputFile, ".csv", sep=""), row.names = F, quote=F)
 
-
 #create a pdf with plots showing the distribution of the different factors across plates
 if(NumberOfPlates>1){
+    message("Output multiplate distribution check PDF")
     pdf(paste(outputFile, ".Multiplate_Distribution_Check.pdf", sep=""))
-    multiplatePlot(tabout, BatchColumns)
-    dev.off()
+        multiplatePlot(tabout, BatchColumns)
+    invisible(dev.off())
 }
 
 ############################################################################################
