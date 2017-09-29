@@ -260,8 +260,8 @@ dat <- read.csv(designFile, stringsAsFactors=F) %>%
 # Check that all batch columns are correct
 if(any(BatchColumns!="<undefined>")){
     if(any(c("SampleGroup", "Replicate")%in%BatchColumns)){
-        message("WARNING: There is no need to include SampleGroup or Replicate as batch columns")
-        BatchColumns <- BatchColumns[!BatchColumns%in%c("SampleGroup", "Replicate")]
+        message("WARNING: There is no need to include SampleName, SampleGroup or Replicate as batch columns")
+        BatchColumns <- BatchColumns[!BatchColumns%in%c("SampleGroup", "Replicate", "SampleName")]
     }
     noCol <- BatchColumns[!BatchColumns%in%colnames(dat)]
     if(length(noCol)>0){
