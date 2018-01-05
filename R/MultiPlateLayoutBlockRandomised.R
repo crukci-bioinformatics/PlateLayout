@@ -255,7 +255,8 @@ options(warn=2)
 
 # Get sample data
 dat <- read.csv(designFile, stringsAsFactors=F) %>% 
-    tbl_df()
+    tbl_df() %>% 
+    mutate(SampleName=as.character(SampleName))
 
 # Check that all batch columns are correct
 if(any(BatchColumns!="<undefined>")){
