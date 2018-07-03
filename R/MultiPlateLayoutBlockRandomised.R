@@ -115,7 +115,9 @@ distributeSamples <- function(datTab, batchColumns, samplesOnEachPlate, numRuns)
         samplePlateAssignment <- rep(1:length(samplesOnEachPlate), minSam)
         samDiff <- samplesOnEachPlate-minSam
         addVec <- as.vector(sapply(which(samDiff>0), function(x){rep(x, samDiff[x])}))
-        samplePlateAssignment <- c(samplePlateAssignment, addVec)[order(c(1:length(samplePlateAssignment), sample(0:length(samplePlateAssignment), length(addVec))+0.5))]
+        if(length(addVec)){
+            samplePlateAssignment <- c(samplePlateAssignment, addVec)[order(c(1:length(samplePlateAssignment), sample(0:length(samplePlateAssignment), length(addVec))+0.5))]
+        }
         
         # Randomise the order of the Groups and the samples and then assign to plates
         Groups <- unique(datTab$SampleGroup)
