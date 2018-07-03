@@ -8,7 +8,7 @@
 
 #set default arguments
 usage="
-PlateLayoutRandomistation -d <designSheet> -o <outputFile> -b <batchColumnHeaders> -r <NumberOfRuns> -GH 
+PlateLayoutRandomistation.sh -d <designSheet> -o <outputFile> -b <batchColumnHeaders> -r <NumberOfRuns> -GH 
 
 Options:
     -d - <string>  - designSheet - Path to experimental design file - required
@@ -39,13 +39,9 @@ fi
 
 # locate R script
 
-SOURCE="${BASH_SOURCE[0]}"
-while [ -h "$source" ]; do # resolve $source until the file is no longer a symlink
-  dir="$( cd -p "$( dirname "$source" )" && pwd )"
-  source="$(readlink "$source")"
-  [[ $source != /* ]] && source="$dir/$source" # if $source was a relative symlink, we need to resolve it relative to the path where the symlink file was located
-done
-ScriptDIR="$( cd -P "$( dirname "$SOURCE" )" && pwd )"
+source="${BASH_SOURCE[0]}"
+source=`readlink -f ${source}`
+ScriptDIR=`dirname ${source}`
 ScriptFile=${ScriptDIR/bin/R}/MultiPlateLayoutBlockRandomised.R
 #ScriptFile=~/Scripts/PlateLayout/R/MultiPlateLayoutBlockRandomised.R
 #echo $ScriptFile
