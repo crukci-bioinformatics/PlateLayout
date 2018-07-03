@@ -6,7 +6,7 @@ Use the shell script in the `bin` directory to access the script
 ----
 
 usage:  
-`PlateLayoutRandomisation -d <designSheet> -o <outputFile> -b <batchColumnHeaders> -w <maxWells> -G -H`
+`PlateLayoutRandomisation.sh -d <designSheet> -o <outputFile> -b <batchColumnHeaders> -w <maxWells> -G -H`
 
 Options:  
 >    -d - <*string*>  - designSheet - Path to experimental design file - **required**  
