@@ -40,7 +40,12 @@ options_list <- list(
     make_option(c('--noGenomicsControls', '-G'), action="store_false",
                 default=TRUE, help="Do not add Genomics controls (generally
                 only used when the lab is doing the library prep rather than
-                Genomics)", dest="genCtrls")
+                Genomics)", dest="genCtrls"),
+    make_option(c('--plateDistributionOnly', '-P'), action="store_true",
+                default=FALSE, help="For multiplate layouts. Only carry out the
+                distribution of the sample between the plate - do not randomise
+                across well or add the water and Genomics Controls.)", 
+                dest="plateOnly")
 )
 
 #read options
@@ -52,6 +57,7 @@ BatchColumns <- opts$batCol
 WellsInOnePlate <- opts$maxWells
 genCtrls <- opts$genCtrls
 numRuns <- opts$numRuns
+plateOnly <- opts$plateOnly
 
 # set options that that have not beem provided
 if(outputFile == "<undefined>") { 
@@ -94,8 +100,10 @@ getNumberOfPlates <- function(numberOfSamples, columnsInOnePlate){
 # determine the number of samples to put on each plate
 getSamplesPerPlate <- function(numberOfSamples, columnsOnEachPlate, wellsInOnePlate){
     numberOfPlates <- length(columnsOnEachPlate)
-    #create a vector of the number of available wells on each plate given the number of columns - the max is 94 if genomics controls are to be added
-    samplesOnEachPlate <- sapply(columnsOnEachPlate, function(x){min(x*8, wellsInOnePlate)})
+    #create a vector of the number of available wells on each plate given the
+    #number of columns - the max is 94 if genomics controls are to be added
+    samplesOnEachPlate <- sapply(columnsOnEachPlate, 
+                                 function(x){min(x*8, wellsInOnePlate)})
     
     #there may be less samples that the total number of available wells.
     nLess <- sum(samplesOnEachPlate)-numberOfSamples
@@ -165,7 +173,7 @@ distributeSamples <- function(datTab, batchColumns, samplesOnEachPlate, numRuns)
     # Select the optimum distribution
     minFactors <- apply(distrFactors, 2, min)
     factorDiff <- apply(distrFactors, 1, function(x){sum(abs(x-minFactors))})
-    write.table(distrFactors, "PlateDistributionFactors.tab", sep="\t", col.names=T, row.names=F, quote=F)
+    #write.table(distrFactors, "PlateDistributionFactors.tab", sep="\t", col.names=T, row.names=F, quote=F) # for development
     optDistr <- which(factorDiff==min(factorDiff))[1]
     # assign plate numbers
     datTab <- datTab %>% 
@@ -351,248 +359,252 @@ if(!"PlateNumber"%in%colnames(dat)&NumberOfPlates==1){
     dat <- distributeSamples(dat, BatchColumns, SamplesOnEachPlate, numRuns)
 }
 
-###################
-#order the factor level of the sample groups. Add water and genomics controls to the factor levels for compatibility with the data frames for these that we may bind later. Also change the replicate column to character.
-groupsList <- unique(dat$SampleGroup)
-groupsList <- groupsList[order(groupsList)]
-dat <- dat %>%
-    mutate(SampleGroup=factor(SampleGroup, levels=c(groupsList, "Water", "GenomicsControl"))) %>%
-    mutate(Replicate=as.character(Replicate))
+# skip the well layout if only plate distribution is requested
+if(!plateOnly){
+    ###################
+    #order the factor level of the sample groups. Add water and genomics controls to the factor levels for compatibility with the data frames for these that we may bind later. Also change the replicate column to character.
+    groupsList <- unique(dat$SampleGroup)
+    groupsList <- groupsList[order(groupsList)]
+    dat <- dat %>%
+        mutate(SampleGroup=factor(SampleGroup, levels=c(groupsList, "Water", "GenomicsControl"))) %>%
+        mutate(Replicate=as.character(Replicate))
 
-#change any additional batch columns into factors including levels for the water and genomics controls which may be added later
-if(any(BatchColumns!="<undefined>")){
-    for(colName in BatchColumns){
-        dat[,colName] <- as.factor(unlist(dat[,colName]))
-        levels(dat[[colName]]) <- c(levels(dat[[colName]]),  "Water", "GenomicsControl")
-    }
-}
-###################
-
-# create a data frame to contain all plates for final the output
-tabout <- tbl_df(data.frame())
-
-# randomise each plate
-runNumber <- numRuns
-plateID <- ""
-for(thisPlateNumber in 1:NumberOfPlates){
-    message("Randomize Plate ", thisPlateNumber)
-    if(NumberOfPlates>1) plateID <- paste(".Plate", thisPlateNumber, sep="_")
-    # The plate layout algorithm first optimises for sample group and then randomises the rows and columns. In 
-    # order to ensure the other "batch" factors are not spatially biased we will run this process a number of times
-    # and then keep the one with the best distribution of samples
-    testColumns <- "SampleGroup" # we will always assess at least the SampleGroup column
+    #change any additional batch columns into factors including levels for the water and genomics controls which may be added later
     if(any(BatchColumns!="<undefined>")){
-        testColumns <- c(testColumns, BatchColumns)
-    }
-    layoutScoreTab <- matrix(nc=length(testColumns), nr=runNumber)
-    colnames(layoutScoreTab) <- testColumns
-    layoutList <- list()
-    
-    for(thisRun in 1:runNumber){
-        
-        if(thisRun>1){ cat(paste(rep("\b", nchar(mess)), collapse = "")) }
-        mess <- paste0("Plate ", thisPlateNumber, " Run Number: ", thisRun, "/", runNumber)
-        cat(mess)
-        
-        #cat(paste("Plate", thisPlateNumber, "Run Number:", thisRun, "\n"))
-        #subset the sample data for this plate
-        plateDat <- filter(dat, PlateNumber==thisPlateNumber)
-        
-        #randomise the order of the groups and the replicates within each group
-        Groups <- plateDat$SampleGroup
-        orderOfGroups <- sample(1:length(Groups))
-        orderOfSamples <- sample(1:nrow(plateDat))
-        plateDat <- plateDat %>% 
-            mutate(GroupNumber=orderOfGroups[match(SampleGroup, Groups)]) %>% 
-            mutate(SampleNumber=orderOfSamples) %>% 
-            arrange(GroupNumber, SampleNumber)
-        
-        # calculate how many water controls and genomics controls to add
-        # We must fill up complete columns
-        # up to 2 empty wells will be filled with Genomics controls, any remaining wells are water
-        nSamples <- nrow(plateDat)
-        nEmptyWells <- 8-(nrow(plateDat)%%8)
-        if(nEmptyWells==8) nEmptyWells <- 0
-        NumberOfColumns <- ceiling(nSamples/8)
-        if(genCtrls){
-            nGenomicControls <- min(c(2, nEmptyWells)) # Fill any empty wells with up to 2 Genomic Controls
-            nWater <- nEmptyWells - nGenomicControls
-        }else{
-            nGenomicControls <- 0
-            nWater <- nEmptyWells
-        }
-        
-        # create a matrix for the wells that will be used, moving diagonally across the plate 
-        AllWells <- data.frame(Column=0, Row=rep(1:8, NumberOfColumns))
-        COL <- 0
-        for(j in 1:nrow(AllWells)){
-            COL <- COL + 1
-            if(paste(COL, AllWells$Row[j])%in%paste(AllWells$Column[1:(j-1)], AllWells$Row[1:(j-1)])) { COL <- COL + 1 }
-            AllWells$Column[j] <- COL
-            if(COL==NumberOfColumns) COL <- 0
-        }
-        
-        #Add the WaterSamples. Water added into random positions within the data frame
-        if(nWater>0){
-            # create random indexes for the positions for the water wells to be inserted into the plate table and add 0.75. When the two dataframe are bound and sorted by "SampleIndex" this will cause the water wells to be inserted into the rows after the random rows genereate
-            # i.e. if sample gives us rows 5 and 13, the water indexes will be 5.75 and 13.75, meaning that after sorting they will be in rows 6 and 14
-            waterWells <- rep(sample(0:nSamples, 1)+0.75, nWater)
-            
-            #Generate a dataframe for the water controls
-            pseudoSamples <- rep("Water", nWater)
-            pseudoSamplesTab <- tbl_df(data.frame(SampleGroup=factor(pseudoSamples, levels=c(groupsList, "Water", "GenomicsControl")), 
-                                                  SampleName=pseudoSamples, 
-                                                  SampleIndex=waterWells,
-                                                  Replicate=as.character(rep("", nWater)),
-                                                  #Replicate=factor(rep("", nWater), levels=c(unique(plateDat$Replicate), "")),
-                                                  PlateNumber=rep(thisPlateNumber, nWater),
-                                                  stringsAsFactors = F
-            ))
-            #add batch columns if necessary
-            if(any(BatchColumns!="<undefined>")){
-                temp <- as.data.frame(matrix("Water", nr=nrow(pseudoSamplesTab), nc=length(BatchColumns)))
-                for(colName in 1:ncol(temp)){
-                    temp[,colName] <- factor(temp[,colName], levels=levels(plateDat[[match(BatchColumns[colName], colnames(plateDat))]]))
-                    }
-                colnames(temp) <- BatchColumns
-                pseudoSamplesTab <- bind_cols(pseudoSamplesTab, temp)
-            }
-            #bind and sort the two data frames
-            plateDat <- plateDat %>% 
-                mutate(SampleIndex=1:nSamples) %>% 
-                bind_rows(pseudoSamplesTab) %>% 
-                arrange(SampleIndex) %>% 
-                select(-SampleIndex) 
-        }
-        
-        #Add the Genomic Controls. GC are added in the rows corresponding to the final two wells used on the plate (they will move during randomisation but when we swap them back this ensures the correct relationship for the two samples they are swapped with - i.e. they were in the same column - the only thing we can know about them at the moment)
-        if(nGenomicControls>0){
-            
-            # find the row index in the array for the bottom wells in the last column for the genomics controls to be placed into
-            GCWells <- c(which(AllWells$Column==NumberOfColumns&AllWells$Row==8), which(AllWells$Column==NumberOfColumns&AllWells$Row==7))[1:nGenomicControls]-0.5
-            if(nGenomicControls==2) GCWells[which.max(GCWells)] <- GCWells[which.max(GCWells)]-1
-            
-            #Generate a dataframe for the Genomics Controls
-            pseudoSamples <-rep("GenomicsControl", nGenomicControls)
-            pseudoSamplesTab <- tbl_df(data.frame(SampleGroup=factor(pseudoSamples, levels=c(groupsList, "Water", "GenomicsControl")), 
-                                                  SampleName=pseudoSamples, 
-                                                  SampleIndex=GCWells,
-                                                  Replicate=rep("", nGenomicControls),
-                                                  #Replicate=factor(rep("", nGenomicControls), levels=c(unique(plateDat$Replicate, ""))),
-                                                  PlateNumber=rep(thisPlateNumber, nGenomicControls),
-                                                  stringsAsFactors = F
-            ))
-            #add batch columns if necessary
-            if(any(BatchColumns!="<undefined>")){
-                temp <- as.data.frame(matrix("GenomicsControl", nr=nrow(pseudoSamplesTab), nc=length(BatchColumns)))
-                for(colName in 1:ncol(temp)){temp[,colName] <- factor(temp[,colName], levels=levels(plateDat[[match(BatchColumns[colName], colnames(plateDat))]]))}
-                colnames(temp) <- BatchColumns
-                pseudoSamplesTab <- bind_cols(pseudoSamplesTab, temp)
-            }
-            #bind and sort the two data frames
-            plateDat <- plateDat %>% 
-                mutate(SampleIndex=1:(nSamples+nWater)) %>% 
-                bind_rows(pseudoSamplesTab) %>% 
-                arrange(SampleIndex) %>% 
-                select(-SampleIndex) 
-        }
-        
-        
-        #Now that we have a complete sample table we can add the well coordinates - this is done systematically to create a pseudo-blocking effect, we will randomise afterwards
-        plateGroupList <- unique(c(groupsList, rep("Water", nWater), rep("GenomicsControls", nGenomicControls)))
-        plateDat <- plateDat %>% 
-            bind_cols(AllWells) #%>% 
-        #droplevels
-        
-        #Randomise rows and then columns
-        plateDat <- plateDat %>% 
-            mutate(Row=randBlock(Row)) %>% 
-            mutate(Column=randBlock(Column))
-        
-        #finally switch the Genomics controls with the end wells if necessary
-        if(nGenomicControls>0){
-            GCRows <- which(plateDat$Column==NumberOfColumns&plateDat$Row>(8-nGenomicControls))
-            AreGC <- which(plateDat$SampleName=="GenomicsControl")
-            #if any are already in the right place, remove them
-            GCrows <- GCRows[!GCRows%in%AreGC]
-            areGC <- AreGC[!AreGC%in%GCRows]
-            #adjust the row and columns accordingly
-            plateDat <- plateDat %>% 
-                mutate(NewRow=Row) %>% 
-                mutate(NewColumn=Column) %>% 
-                mutate(NewRow=replace(NewRow, GCrows, plateDat$Row[areGC]))    %>% 
-                mutate(NewRow=replace(NewRow, areGC, plateDat$Row[GCrows])) %>% 
-                mutate(NewColumn=replace(NewColumn, GCrows, plateDat$Column[areGC]))    %>% 
-                mutate(NewColumn=replace(NewColumn, areGC, plateDat$Column[GCrows])) %>% 
-                select(-Row, -Column) %>% 
-                rename(Row=NewRow) %>% 
-                rename(Column=NewColumn)
-        }
-        
-        # now that the layout is finalised we will test the distribution of the different factors and assign a score
-        for(thisCol in testColumns){
-            layoutScoreTab[thisRun,thisCol] <- getDistrScore(plateDat, thisCol)
-        }
-        layoutList[[thisRun]] <- plateDat[order(plateDat$SampleName),c("Row", "Column")]
-    }
-    cat("\n") 
-    
-    message("Output tables and plots for Plate ", thisPlateNumber)
-    write.csv(layoutScoreTab, paste(outputFile, plateID, ".PlateDistribution.csv", sep=""), row.names = F, quote=F)
-    layoutScoreTab <- apply(layoutScoreTab, 2, function(x){x/mean(x)})
-    finalScores <- rowSums(layoutScoreTab)
-    whiBest <- which.min(finalScores)
-    plateDat <- plateDat[order(plateDat$SampleName),]
-    plateDat$Row <- layoutList[[whiBest]]$Row
-    plateDat$Column <- layoutList[[whiBest]]$Column
-    
-    # plot the plate layout and save
-    #generate a colour coding for plotting to keep consistency across different plates
-    if(thisPlateNumber==1){
-        colCodes <- colorRampPalette(brewer.pal(12,"Set3"))(length(levels(plateDat$SampleGroup))-2)
-        if(nWater>0) colCodes <- c(colCodes, "#0000FF")
-        if(nGenomicControls>0) colCodes <- c(colCodes, "#000000")
-    }
-    #plot plate layout
-    testPlot(plateDat, "SampleGroup", colCodes)
-    plotWidth <- (1.1*NumberOfColumns)+(max(nchar(groupsList))*0.075)+0.15
-    ggsave(paste(outputFile, plateID, ".png", sep=""), height = 5, width=plotWidth)  
-
-    if(any(BatchColumns!="<undefined>")){
-        #generate a colour coding for plotting each batch to keep consistency across different plates
-        if(thisPlateNumber==1){ 
-            colCodesBatches <- vector("list", length(BatchColumns)) 
-            names(colCodesBatches) <- BatchColumns
-        }
         for(colName in BatchColumns){
-            if(thisPlateNumber==1){
-                colCodesBatches[[colName]] <- colorRampPalette(brewer.pal(12,"Set3"))(length(levels(plateDat[[colName]]))-2)
-                if(nWater>0) colCodesBatches[[colName]] <- c(colCodesBatches[[colName]], "#0000FF")
-                if(nGenomicControls>0) colCodesBatches[[colName]] <- c(colCodesBatches[[colName]], "#000000")
-            }
-            #plot
-            testPlot(plateDat, colName, colCodesBatches[[colName]])
-            plotWidth <- (1.1*NumberOfColumns)+1.5
-            ggsave(paste(outputFile, plateID, ".", colName, ".png", sep=""), height = 5, width=plotWidth)  
+            dat[,colName] <- as.factor(unlist(dat[,colName]))
+            levels(dat[[colName]]) <- c(levels(dat[[colName]]),  "Water", "GenomicsControl")
         }
     }
+    ###################
 
-    #replace the well row numbers with letters and create the well index column
-    plateDat <- plateDat %>% 
-        mutate(Row=LETTERS[Row]) %>% 
-        mutate(Well=paste(Row, Column, sep=""))
+    # create a data frame to contain all plates for final the output
+    tabout <- tbl_df(data.frame())
 
-    # bind the plate to the output table
-    tabout <- plateDat %>% 
-        select(-GroupNumber, -SampleNumber) %>% 
-        bind_rows(tabout)
-}
+    # randomise each plate
+    runNumber <- numRuns
+    plateID <- ""
+    for(thisPlateNumber in 1:NumberOfPlates){
+        message("Randomize Plate ", thisPlateNumber)
+        if(NumberOfPlates>1) plateID <- paste(".Plate", thisPlateNumber, sep="_")
+        # The plate layout algorithm first optimises for sample group and then randomises the rows and columns. In 
+        # order to ensure the other "batch" factors are not spatially biased we will run this process a number of times
+        # and then keep the one with the best distribution of samples
+        testColumns <- "SampleGroup" # we will always assess at least the SampleGroup column
+        if(any(BatchColumns!="<undefined>")){
+            testColumns <- c(testColumns, BatchColumns)
+        }
+        layoutScoreTab <- matrix(nc=length(testColumns), nr=runNumber)
+        colnames(layoutScoreTab) <- testColumns
+        layoutList <- list()
+        
+        for(thisRun in 1:runNumber){
+            
+            if(thisRun>1){ cat(paste(rep("\b", nchar(mess)), collapse = "")) }
+            mess <- paste0("Plate ", thisPlateNumber, " Run Number: ", thisRun, "/", runNumber)
+            cat(mess)
+            
+            #cat(paste("Plate", thisPlateNumber, "Run Number:", thisRun, "\n"))
+            #subset the sample data for this plate
+            plateDat <- filter(dat, PlateNumber==thisPlateNumber)
+            
+            #randomise the order of the groups and the replicates within each group
+            Groups <- plateDat$SampleGroup
+            orderOfGroups <- sample(1:length(Groups))
+            orderOfSamples <- sample(1:nrow(plateDat))
+            plateDat <- plateDat %>% 
+                mutate(GroupNumber=orderOfGroups[match(SampleGroup, Groups)]) %>% 
+                mutate(SampleNumber=orderOfSamples) %>% 
+                arrange(GroupNumber, SampleNumber)
+            
+            # calculate how many water controls and genomics controls to add
+            # We must fill up complete columns
+            # up to 2 empty wells will be filled with Genomics controls, any remaining wells are water
+            nSamples <- nrow(plateDat)
+            nEmptyWells <- 8-(nrow(plateDat)%%8)
+            if(nEmptyWells==8) nEmptyWells <- 0
+            NumberOfColumns <- ceiling(nSamples/8)
+            if(genCtrls){
+                nGenomicControls <- min(c(2, nEmptyWells)) # Fill any empty wells with up to 2 Genomic Controls
+                nWater <- nEmptyWells - nGenomicControls
+            }else{
+                nGenomicControls <- 0
+                nWater <- nEmptyWells
+            }
+            
+            # create a matrix for the wells that will be used, moving diagonally across the plate 
+            AllWells <- data.frame(Column=0, Row=rep(1:8, NumberOfColumns))
+            COL <- 0
+            for(j in 1:nrow(AllWells)){
+                COL <- COL + 1
+                if(paste(COL, AllWells$Row[j])%in%paste(AllWells$Column[1:(j-1)], AllWells$Row[1:(j-1)])) { COL <- COL + 1 }
+                AllWells$Column[j] <- COL
+                if(COL==NumberOfColumns) COL <- 0
+            }
+            
+            #Add the WaterSamples. Water added into random positions within the data frame
+            if(nWater>0){
+                # create random indexes for the positions for the water wells to be inserted into the plate table and add 0.75. When the two dataframe are bound and sorted by "SampleIndex" this will cause the water wells to be inserted into the rows after the random rows genereate
+                # i.e. if sample gives us rows 5 and 13, the water indexes will be 5.75 and 13.75, meaning that after sorting they will be in rows 6 and 14
+                waterWells <- rep(sample(0:nSamples, 1)+0.75, nWater)
+                
+                #Generate a dataframe for the water controls
+                pseudoSamples <- rep("Water", nWater)
+                pseudoSamplesTab <- tbl_df(data.frame(SampleGroup=factor(pseudoSamples, levels=c(groupsList, "Water", "GenomicsControl")), 
+                                                      SampleName=pseudoSamples, 
+                                                      SampleIndex=waterWells,
+                                                      Replicate=as.character(rep("", nWater)),
+                                                      #Replicate=factor(rep("", nWater), levels=c(unique(plateDat$Replicate), "")),
+                                                      PlateNumber=rep(thisPlateNumber, nWater),
+                                                      stringsAsFactors = F
+                ))
+                #add batch columns if necessary
+                if(any(BatchColumns!="<undefined>")){
+                    temp <- as.data.frame(matrix("Water", nr=nrow(pseudoSamplesTab), nc=length(BatchColumns)))
+                    for(colName in 1:ncol(temp)){
+                        temp[,colName] <- factor(temp[,colName], levels=levels(plateDat[[match(BatchColumns[colName], colnames(plateDat))]]))
+                        }
+                    colnames(temp) <- BatchColumns
+                    pseudoSamplesTab <- bind_cols(pseudoSamplesTab, temp)
+                }
+                #bind and sort the two data frames
+                plateDat <- plateDat %>% 
+                    mutate(SampleIndex=1:nSamples) %>% 
+                    bind_rows(pseudoSamplesTab) %>% 
+                    arrange(SampleIndex) %>% 
+                    select(-SampleIndex) 
+            }
+            
+            #Add the Genomic Controls. GC are added in the rows corresponding to the final two wells used on the plate (they will move during randomisation but when we swap them back this ensures the correct relationship for the two samples they are swapped with - i.e. they were in the same column - the only thing we can know about them at the moment)
+            if(nGenomicControls>0){
+                
+                # find the row index in the array for the bottom wells in the last column for the genomics controls to be placed into
+                GCWells <- c(which(AllWells$Column==NumberOfColumns&AllWells$Row==8), which(AllWells$Column==NumberOfColumns&AllWells$Row==7))[1:nGenomicControls]-0.5
+                if(nGenomicControls==2) GCWells[which.max(GCWells)] <- GCWells[which.max(GCWells)]-1
+                
+                #Generate a dataframe for the Genomics Controls
+                pseudoSamples <-rep("GenomicsControl", nGenomicControls)
+                pseudoSamplesTab <- tbl_df(data.frame(SampleGroup=factor(pseudoSamples, levels=c(groupsList, "Water", "GenomicsControl")), 
+                                                      SampleName=pseudoSamples, 
+                                                      SampleIndex=GCWells,
+                                                      Replicate=rep("", nGenomicControls),
+                                                      #Replicate=factor(rep("", nGenomicControls), levels=c(unique(plateDat$Replicate, ""))),
+                                                      PlateNumber=rep(thisPlateNumber, nGenomicControls),
+                                                      stringsAsFactors = F
+                ))
+                #add batch columns if necessary
+                if(any(BatchColumns!="<undefined>")){
+                    temp <- as.data.frame(matrix("GenomicsControl", nr=nrow(pseudoSamplesTab), nc=length(BatchColumns)))
+                    for(colName in 1:ncol(temp)){temp[,colName] <- factor(temp[,colName], levels=levels(plateDat[[match(BatchColumns[colName], colnames(plateDat))]]))}
+                    colnames(temp) <- BatchColumns
+                    pseudoSamplesTab <- bind_cols(pseudoSamplesTab, temp)
+                }
+                #bind and sort the two data frames
+                plateDat <- plateDat %>% 
+                    mutate(SampleIndex=1:(nSamples+nWater)) %>% 
+                    bind_rows(pseudoSamplesTab) %>% 
+                    arrange(SampleIndex) %>% 
+                    select(-SampleIndex) 
+            }
+            
+            
+            #Now that we have a complete sample table we can add the well coordinates - this is done systematically to create a pseudo-blocking effect, we will randomise afterwards
+            plateGroupList <- unique(c(groupsList, rep("Water", nWater), rep("GenomicsControls", nGenomicControls)))
+            plateDat <- plateDat %>% 
+                bind_cols(AllWells) #%>% 
+            #droplevels
+            
+            #Randomise rows and then columns
+            plateDat <- plateDat %>% 
+                mutate(Row=randBlock(Row)) %>% 
+                mutate(Column=randBlock(Column))
+            
+            #finally switch the Genomics controls with the end wells if necessary
+            if(nGenomicControls>0){
+                GCRows <- which(plateDat$Column==NumberOfColumns&plateDat$Row>(8-nGenomicControls))
+                AreGC <- which(plateDat$SampleName=="GenomicsControl")
+                #if any are already in the right place, remove them
+                GCrows <- GCRows[!GCRows%in%AreGC]
+                areGC <- AreGC[!AreGC%in%GCRows]
+                #adjust the row and columns accordingly
+                plateDat <- plateDat %>% 
+                    mutate(NewRow=Row) %>% 
+                    mutate(NewColumn=Column) %>% 
+                    mutate(NewRow=replace(NewRow, GCrows, plateDat$Row[areGC]))    %>% 
+                    mutate(NewRow=replace(NewRow, areGC, plateDat$Row[GCrows])) %>% 
+                    mutate(NewColumn=replace(NewColumn, GCrows, plateDat$Column[areGC]))    %>% 
+                    mutate(NewColumn=replace(NewColumn, areGC, plateDat$Column[GCrows])) %>% 
+                    select(-Row, -Column) %>% 
+                    rename(Row=NewRow) %>% 
+                    rename(Column=NewColumn)
+            }
+            
+            # now that the layout is finalised we will test the distribution of the different factors and assign a score
+            for(thisCol in testColumns){
+                layoutScoreTab[thisRun,thisCol] <- getDistrScore(plateDat, thisCol)
+            }
+            layoutList[[thisRun]] <- plateDat[order(plateDat$SampleName),c("Row", "Column")]
+        }
+        cat("\n") 
+        
+        message("Output tables and plots for Plate ", thisPlateNumber)
+        write.csv(layoutScoreTab, paste(outputFile, plateID, ".PlateDistribution.csv", sep=""), row.names = F, quote=F)
+        layoutScoreTab <- apply(layoutScoreTab, 2, function(x){x/mean(x)})
+        finalScores <- rowSums(layoutScoreTab)
+        whiBest <- which.min(finalScores)
+        plateDat <- plateDat[order(plateDat$SampleName),]
+        plateDat$Row <- layoutList[[whiBest]]$Row
+        plateDat$Column <- layoutList[[whiBest]]$Column
+        
+        # plot the plate layout and save
+        #generate a colour coding for plotting to keep consistency across different plates
+        if(thisPlateNumber==1){
+            colCodes <- colorRampPalette(brewer.pal(12,"Set3"))(length(levels(plateDat$SampleGroup))-2)
+            if(nWater>0) colCodes <- c(colCodes, "#0000FF")
+            if(nGenomicControls>0) colCodes <- c(colCodes, "#000000")
+        }
+        #plot plate layout
+        testPlot(plateDat, "SampleGroup", colCodes)
+        plotWidth <- (1.1*NumberOfColumns)+(max(nchar(groupsList))*0.075)+0.15
+        ggsave(paste(outputFile, plateID, ".png", sep=""), height = 5, width=plotWidth)  
 
+        if(any(BatchColumns!="<undefined>")){
+            #generate a colour coding for plotting each batch to keep consistency across different plates
+            if(thisPlateNumber==1){ 
+                colCodesBatches <- vector("list", length(BatchColumns)) 
+                names(colCodesBatches) <- BatchColumns
+            }
+            for(colName in BatchColumns){
+                if(thisPlateNumber==1){
+                    colCodesBatches[[colName]] <- colorRampPalette(brewer.pal(12,"Set3"))(length(levels(plateDat[[colName]]))-2)
+                    if(nWater>0) colCodesBatches[[colName]] <- c(colCodesBatches[[colName]], "#0000FF")
+                    if(nGenomicControls>0) colCodesBatches[[colName]] <- c(colCodesBatches[[colName]], "#000000")
+                }
+                #plot
+                testPlot(plateDat, colName, colCodesBatches[[colName]])
+                plotWidth <- (1.1*NumberOfColumns)+1.5
+                ggsave(paste(outputFile, plateID, ".", colName, ".png", sep=""), height = 5, width=plotWidth)  
+            }
+        }
 
-# if there is only one plate remove the plate number column. 
-tabout <- tabout %>% 
-    arrange(PlateNumber, Column, Row)
-if(NumberOfPlates==1) dat <- select(dat, -PlateNumber)
+        #replace the well row numbers with letters and create the well index column
+        plateDat <- plateDat %>% 
+            mutate(Row=LETTERS[Row]) %>% 
+            mutate(Well=paste(Row, Column, sep=""))
+
+        # bind the plate to the output table
+        tabout <- plateDat %>% 
+            select(-GroupNumber, -SampleNumber) %>% 
+            bind_rows(tabout)
+    }
+    # if there is only one plate remove the plate number column. 
+    tabout <- tabout %>% 
+        arrange(PlateNumber, Column, Row)
+}else{
+    tabout <- arrange(dat, PlateNumber)
+}        
+
+if(NumberOfPlates==1) tabout <- select(tabout, -PlateNumber)
 #write the final output table
 write.csv(tabout, paste(outputFile, ".csv", sep=""), row.names = F, quote=F)
 
