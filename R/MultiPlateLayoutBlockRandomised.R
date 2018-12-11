@@ -61,7 +61,12 @@ plateOnly <- opts$plateOnly
 
 # set options that that have not beem provided
 if(outputFile == "<undefined>") { 
-    outputFile <- gsub("[[:alnum:]]*$", "PlateLayout", basename(designFile)) 
+    if(plateOnly){
+        outputFile <- gsub("[[:alnum:]]*$", "PlateDistribution", 
+                           basename(designFile)) 
+    }else{
+        outputFile <- gsub("[[:alnum:]]*$", "PlateLayout", basename(designFile)) 
+    }
 }
 
 # split BatchColumns
