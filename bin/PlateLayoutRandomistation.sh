@@ -15,6 +15,7 @@ Options:
     -o - <string>  - outputFileName - Output Filename prefix - optional
     -b - <string>  - batchColumns - Columns to use to create additional plots for checking batch distributions - optional
     -w - <integer> - maxWells - Maximum number of wells to use on the plate [default=96] - optional
+    -n - <integer> - numRuns - The number of random distributions to test
     -G - <FLAG>    - noGenomicsControls - do not reserve wells for Genomics controls - this generally only used when the lab is doing the library prep rather than Genomics [default=FALSE] - optional
     -H - Show this help message and exit
 
