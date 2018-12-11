@@ -1,8 +1,21 @@
-# This script takes an experimental design table and generates a pseudo-block-randomised plate layout for it. It can cope with multiple plates - it will randomly spread the samples evenly between the plates. 
-# The input table should be a csv file with a minimum of three columns headed "SampleName", SampleGroup" and "Replicate". Any additional columns will be ignored.
-# Do not add  "SampleName", SampleGroup" or "Replicate" as batch columns, these will automatically be included
-# If the samples are to be spread across multiple plates you can include a "PlateNumber" column, and manually assign the samples to specific plates.
-# The outputs are one image file showing the plate layout, indicating both sample group and replicate number, and a table with the layout. The output table will include all the data in the input table, plus 3 or 4 additional columns indicating the plate number (if multiple plates), the row of the well (A-H), the column of the well (1-12) and the coordinate of the well (A1, A2...H7,H8)
+# This script takes an experimental design table and generates a
+# pseudo-block-randomised plate layout for it. It can cope with multiple plates
+# - it will randomly spread the samples evenly between the plates.  The input
+# table should be a csv file with a minimum of three columns headed
+# "SampleName", SampleGroup" and "Replicate". Any additional columns will be
+# ignored.
+
+# Do not add  "SampleName", SampleGroup" or "Replicate" as batch columns, these
+# will automatically be included If the samples are to be spread across
+# multiple plates you can include a "PlateNumber" column, and manually assign
+# the samples to specific plates.
+
+# The outputs are one image file showing the plate layout, indicating both
+# sample group and replicate number, and a table with the layout. The output
+# table will include all the data in the input table, plus 3 or 4 additional
+# columns indicating the plate number (if multiple plates), the row of the well
+# (A-H), the column of the well (1-12) and the coordinate of the well (A1,
+# A2...H7,H8)
 
 library(optparse)
 suppressPackageStartupMessages(library(dplyr))
@@ -11,21 +24,23 @@ library(RColorBrewer)
 
 #Input options
 options_list <- list(
-    make_option(c('--designSheet', '-d'), type='character', 
-                help="Path to experimental design file - required", dest="designSheet", 
+    make_option(c('--designSheet', '-d'), type='character', help="Path to
+                experimental design file - required", dest="designSheet",
                 default="<undefined>"),
-    make_option(c('--output', '-o'), type='character', help="Output Filename - optional", 
-                dest="outputFile", default="<undefined>"),
-    make_option(c('--batchColumns', '-b'), type='character', 
-                help="Column to be plotted in multiplate experiments", dest="batCol", 
+    make_option(c('--output', '-o'), type='character', help="Output Filename -
+                optional", dest="outputFile", default="<undefined>"),
+    make_option(c('--batchColumns', '-b'), type='character', help="Column to be
+                plotted in multiplate experiments", dest="batCol",
                 default="<undefined>"),
-    make_option(c('--maxWells', '-w'), type='integer', 
-                help="The maximum number of wells to use per plate", dest="maxWells", default="96"),
-    make_option(c('--numRuns', '-n'), type='integer', 
-                help="The number of random distributions to test", dest="numRuns", default="10000"),
-    make_option(c('--noGenomicsControls', '-G'), action="store_false", default=TRUE, 
-                help="Do not add Genomics controls (generally only used when the lab is doing the 
-                library prep rather than Genomics)", dest="genCtrls")
+    make_option(c('--maxWells', '-w'), type='integer', help="The maximum number
+                of wells to use per plate", dest="maxWells", default="96"),
+    make_option(c('--numRuns', '-n'), type='integer', help="The number of
+                random distributions to test", dest="numRuns",
+                default="10000"),
+    make_option(c('--noGenomicsControls', '-G'), action="store_false",
+                default=TRUE, help="Do not add Genomics controls (generally
+                only used when the lab is doing the library prep rather than
+                Genomics)", dest="genCtrls")
 )
 
 #read options
@@ -39,21 +54,26 @@ genCtrls <- opts$genCtrls
 numRuns <- opts$numRuns
 
 # set options that that have not beem provided
-if(outputFile == "<undefined>") { outputFile <- gsub("[[:alnum:]]*$", "PlateLayout", basename(designFile)) }
+if(outputFile == "<undefined>") { 
+    outputFile <- gsub("[[:alnum:]]*$", "PlateLayout", basename(designFile)) 
+}
 
 # split BatchColumns
 BatchColumns <- strsplit(BatchColumns, ",")[[1]]
 
-#########################################################################################################
+################################################################################
 ## FUNCTIONS
-#########################################################################################################
+################################################################################
 
-# determine the number of plates to use and the number of columns on each plate. see NOTE 1 at end of script
+# determine the number of plates to use and the number of columns on each
+# plate. see NOTE 1 at end of script
 getNumberOfPlates <- function(numberOfSamples, columnsInOnePlate){
     noS <- numberOfSamples
     count12s <- 0
     count12sold <- -1
-    # this loop determines the number of columns to use one each plate, accounting for two genomic controls in full plates. If you can determine a more elegant way of doing this please let me know.
+    # this loop determines the number of columns to use one each plate,
+    # accounting for two genomic controls in full plates. If you can determine
+    # a more elegant way of doing this please let me know.
     while(count12sold!=count12s){
         noS <- noS+(count12s*2)
         numberOfColumns <- ceiling(noS/8)
@@ -61,9 +81,12 @@ getNumberOfPlates <- function(numberOfSamples, columnsInOnePlate){
         columnsPerPlate <- numberOfColumns%/%numberOfPlates
         extraColumns <- numberOfColumns%%numberOfPlates
         columnsOnEachPlate <- rep(columnsPerPlate, numberOfPlates)
-        columnsOnEachPlate[seq(0, extraColumns)] <- columnsOnEachPlate[seq(0, extraColumns)]+1
+        columnsOnEachPlate[seq(0, extraColumns)] <- 
+            columnsOnEachPlate[seq(0, extraColumns)]+1
         count12sold <- count12s
-        if(genCtrls) count12s <- length(which(columnsOnEachPlate==12)) #add two samples for each complete 12 column plate to represent the genomics controls and recalculate if necessary
+        # add two samples for each complete 12 column plate to represent the
+        # genomics controls and recalculate if necessary
+        if(genCtrls) count12s <- length(which(columnsOnEachPlate==12)) 
     }
     return(columnsOnEachPlate)
 }
@@ -114,7 +137,7 @@ distributeSamples <- function(datTab, batchColumns, samplesOnEachPlate, numRuns)
         minSam <- min(samplesOnEachPlate)
         samplePlateAssignment <- rep(1:length(samplesOnEachPlate), minSam)
         samDiff <- samplesOnEachPlate-minSam
-        addVec <- as.vector(sapply(which(samDiff>0), function(x){rep(x, samDiff[x])}))
+        addVec <- unlist(sapply(which(samDiff>0), function(x){rep(x, samDiff[x])}))
         if(length(addVec)){
             samplePlateAssignment <- c(samplePlateAssignment, addVec)[order(c(1:length(samplePlateAssignment), sample(0:length(samplePlateAssignment), length(addVec))+0.5))]
         }
@@ -223,7 +246,7 @@ multiplatePlot <- function(plotDat, batches){
     print(replicatePlot)
     
     #plot the distribution of other requested factors across plates
-    if(batches!="<undefined>"){
+    if(any(batches!="<undefined>")){
         for(colName in batches){
             colNamePlot <- ggplot(plotDat, aes_string(x=colName, fill="PlateNumber"))+
                 geom_bar(position="dodge")+
