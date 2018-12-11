@@ -22,7 +22,7 @@ Options:
 "
 
 #get arguments
-while getopts d:o:b:w:GH opt; do
+while getopts d:o:b:w:n:GH opt; do
     case "$opt" in
         d) designSheet="$OPTARG";;
         H) echo "$usage"; exit;;
