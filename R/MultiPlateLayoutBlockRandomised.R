@@ -45,7 +45,12 @@ options_list <- list(
                 default=FALSE, help="For multiplate layouts. Only carry out the
                 distribution of the sample between the plate - do not randomise
                 across well or add the water and Genomics Controls.)", 
-                dest="plateOnly")
+                dest="plateOnly"),
+    make_option(c('--evenColumns', '-C'), action="store_true",
+                default=FALSE, help="For multiplate layouts. Put the sample 
+                number of samples on each plate. Otherwise samples are 
+                distributed to minimise the number of columns used.",
+                dest="optimiseCols")
 )
 
 #read options
@@ -58,6 +63,7 @@ WellsInOnePlate <- opts$maxWells
 genCtrls <- opts$genCtrls
 numRuns <- opts$numRuns
 plateOnly <- opts$plateOnly
+optimiseCols <- opts$optimiseCols
 
 # set options that that have not beem provided
 if(outputFile == "<undefined>") { 
@@ -77,8 +83,8 @@ BatchColumns <- strsplit(BatchColumns, ",")[[1]]
 ################################################################################
 
 # determine the number of plates to use and the number of columns on each
-# plate. see NOTE 1 at end of script
-getNumberOfPlates <- function(numberOfSamples, columnsInOnePlate){
+# plate. This function optimises for minimum columns see NOTE 1 at end of script
+getNumberOfPlatesOpt <- function(numberOfSamples, columnsInOnePlate){
     noS <- numberOfSamples
     count12s <- 0
     count12sold <- -1
@@ -338,10 +344,18 @@ if("PlateNumber"%in%colnames(dat)){
     ColumnsOnEachPlate <- ceiling(SamplesOnEachPlate/8)
     NumberOfPlates <- max(plateNumbers)
 }else{
-    NumberOfSamples <- nrow(dat)
-    ColumnsOnEachPlate <- getNumberOfPlates(NumberOfSamples, ColumnsInOnePlate)
-    NumberOfPlates <- length(ColumnsOnEachPlate)
-    SamplesOnEachPlate <- getSamplesPerPlate(NumberOfSamples, ColumnsOnEachPlate, WellsInOnePlate)
+    if(!optimiseCols){
+        NumberOfSamples <- nrow(dat)
+        ColumnsOnEachPlate <- getNumberOfPlatesOpt(NumberOfSamples, ColumnsInOnePlate)
+        NumberOfPlates <- length(ColumnsOnEachPlate)
+        SamplesOnEachPlate <- getSamplesPerPlate(NumberOfSamples, ColumnsOnEachPlate, WellsInOnePlate)
+    }else{
+        NumberOfSamples <- nrow(dat)
+        NumberOfPlates <- ceiling(NumberOfSamples / WellsInOnePlate) 
+        ColumnsOnEachPlate <- rep(ceiling(NumberOfSamples / NumberOfPlates / 8),
+                                  NumberOfPlates)
+        SamplesOnEachPlate <- getSamplesPerPlate(NumberOfSamples, ColumnsOnEachPlate, WellsInOnePlate)
+    }
 }
 
 
