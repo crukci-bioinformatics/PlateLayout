@@ -1,9 +1,8 @@
-# This script contains three functions to randomise samples by SampleGroup
-# across a 96 well plate given a sample metadata table with the column
-# "SampleGroup" in it.
+# This script contains three functions to randomise samples across
+# across a 96 well plate given a sample metadata table. The distribution of the samples is optimised using the contents of a single column in the table - the `primaryGroup`.
 # Steps:
-# 1) randomiseSampleTable - Randomise the order of sample groups and replicates
-#    in the metadata table:
+# 1) randomiseSampleTable - Randomise the order of different factors in the
+# "primary group` and replicates within each factor in the metadata table:
 #       (1) randomise the order of the sample groups in the table
 #       (2) randomise the order of the replicates within each group
 # 2) addWells:
@@ -21,11 +20,11 @@
 
 suppressPackageStartupMessages(library(tidyverse))
 
-randomiseSampleTable <- function(dat){
+randomiseSampleTable <- function(dat, primaryGroup){
     # (1) randomise the order of the sample groups in the table
     # (2) randomise the order of the replicates within each group
     dat %>% 
-        group_by(SampleGroup) %>%  
+        group_by_at(primaryGroup) %>%  
         nest()  %>%  
         ungroup() %>%  
         mutate(Ord.Gp = sample(seq(n()))) %>% 
@@ -84,9 +83,9 @@ randomiseWells <- function(dat){
 
 
 # main function
-runRandomisation <- function(samSht){
-    samsht %>%  
-        randomiseSampleTable() %>%  
+plateRandomisation <- function(samSht, primaryGroup){
+    samSht %>%  
+        randomiseSampleTable(primaryGroup = primaryGroup)  %>%  
         addWells() %>%  
         randomiseWells()
 }            
