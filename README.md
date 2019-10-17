@@ -48,9 +48,9 @@ The algorithm for randomising the plate layout is as follows:
     c) sort the table by group and then sample  
 
 2. Assign each sample to a well by traversing the plate diagonally:    
-   i) determine the number of columns that will be needed to accomodate all the
+    a) determine the number of columns that will be needed to accomodate all the
 samples on the plate    
-  ii) the first sample in the table is then assigned to A1, the second to B2
+    b) the first sample in the table is then assigned to A1, the second to B2
       and so on. On reaching the final column continue the next row from column
       1, and continue the next column from Row A when Row H has been reached.  
     The purpose of assigning wells in this way is to distribute the
@@ -62,9 +62,9 @@ samples on the plate
 
 5. Randomise rows and columns as blocks - this maintains the distribution of
    replicates relative to each other, but randomises the overall plate layout.  
-  i. each row is assigned a randomn number from 1-8 and the rows are re-ordered
+    a) each row is assigned a randomn number from 1-8 and the rows are re-ordered
      according to this  
-  ii. each column is assigned a randomn number from 1-nColumns and the columns
+    b) each column is assigned a randomn number from 1-nColumns and the columns
       are ordered according to this  
 
     e.g. for 5 rows with 40 samples:
