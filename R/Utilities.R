@@ -76,7 +76,6 @@ plotPlate <- function(dat, plotCol, wellCols = NULL){
         ggtitle(plotCol) +
         labs(fill=plotCol)
     if(is.null(wellCols)){ wellCols <- getCols(dat, plotCol) }
-    message(wellCols)
     plt <- plt + scale_fill_manual(values = wellCols)
     if(any(str_detect(colnames(dat), "[Rr]eplicate"))){
         plt <- plt + geom_text(aes(label=Replicate), size=7)
@@ -85,7 +84,6 @@ plotPlate <- function(dat, plotCol, wellCols = NULL){
 }
 
 savePlots <- function(batchColumn, datTab, outFileName){
-    message(batchColumn)
     outFileName  <- str_c(outFileName, ".", batchColumn, ".png")
     p1 <- plotPlate(datTab, batchColumn)
     ggsave(outFileName, plot = p1)
