@@ -23,9 +23,10 @@
 #' @return Nothing. The function writes out the plate layout to a tsv file and
 #' a plot for each of `primaryGroup` and `batchColumns` to png files.
 #' @examples
-#' designSheet <- "metadata_template_TEST_12x3.tsv"
+#' designSheet <- system.file("extdata", "metadata_template_TEST_12x3.tsv",
+#'                            package = "PlateLayout")
 #' outputFile <- "Test"
-#' bColumns <-"ExtractionInformation,PassageNumber" 
+#' bColumns <- c("ExtractionInformation", "PassageNumber") 
 #' randomizeSinglePlate(designSheet, outputFile, batchColumns = bColumns,
 #'                      nIter = 100) 
 #' @export
