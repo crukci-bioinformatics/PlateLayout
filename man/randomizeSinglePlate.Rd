@@ -44,9 +44,10 @@ optimal in terms of the distribution of samples. This assessed based on the
 sum of Euclidean distances between replicate samples within each column.
 }
 \examples{
-designSheet <- "metadata_template_TEST_12x3.tsv"
+designSheet <- system.file("extdata", "metadata_template_TEST_12x3.tsv",
+                           package = "PlateLayout")
 outputFile <- "Test"
-bColumns <-"ExtractionInformation,PassageNumber" 
+bColumns <- c("ExtractionInformation", "PassageNumber") 
 randomizeSinglePlate(designSheet, outputFile, batchColumns = bColumns,
                      nIter = 100) 
 }
