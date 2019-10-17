@@ -14,11 +14,11 @@ devtools::install_github("crukci-bioinformatics/PlateLayout")
 This package takes an experimental design table and generates a
 "pseudo-block-randomised" plate layout for it. 
 
-The package first optimises the layout of the plate, and then randomises the
-columns and rows. The randomisation process is carried out 10000 times and an
-algorithm is used to score each randomistation to see how well
-distributed/badly clumpled each sample group is. The "best" randomistation is
-the delivered.
+The package optimises the layout of the plate, and then randomises the columns
+and rows. The randomisation process is carried out multiple times and the
+distance between replicate samples is used to score each randomistation to see
+how well distributed/badly clumpled each sample group is. The "best"
+randomistation is then delivered.
 
 The script uses one column, defined by the `primaryGroup` argument (by default
 "SampleGroup"), for the optimisation/randomistaion process. If there are known
@@ -29,12 +29,31 @@ the `batchColumns` argument.
 
 ## Inputs
 
-The input table should be a tab separated file.
+The input table should be a tab separated file with samples in rows and
+experimental factors and any other metadata in columns.
 
 ## Outputs
 
-The outputs are one image (png) file for each "batch column" and a table with
-the layout.
+The outputs are one image (png) file for each experimental factor considered in
+the layout and a table with the layout.
+
+## Usage
+
+There is currently only one top-level command: `randomizeSinglePlate`. Please
+see the help page for details of the arguments.
+
+Basic usage:
+
+```
+randomizeSinglePlate("SampleSheet.tsv", outputFile="Final_layout")
+```
+
+By default the script uses the "SampleGroup" column to optimise the layout,
+however, any other column can be used instead, and in fact there are no 
+required column headers.
+
+**Note:** by default the script runs in parallel across 4 cores. You can change
+this with the `nCores` argument.
 
 ## Plate Layout Process
 
