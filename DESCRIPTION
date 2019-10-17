@@ -1,0 +1,15 @@
+Package: PlateLayout
+Type: Package
+Title: Plate Layout Randomiser
+Version: 0.1
+Date: 2019-15-09
+Authors@R: person("Sawle", "Ashley", role=c("aut", "cre"),
+    email="ads2202cu@gmail.com")
+Description: Tools for randomising the layout of samples across the well of 96
+    well plates. 
+License: GPL-2
+Imports: dplyr, furrr, future, ggplot2, purrr, RColorBrewer, readr, stringr,
+    tibble, tidyr 
+Depends: R (>= 3.6)
+BugReports: https://github.com/crukci-bioinformatics/PlateLayout/issues
+RoxygenNote: 6.1.1
