@@ -8,8 +8,8 @@ Authors@R: person("Sawle", "Ashley", role=c("aut", "cre"),
 Description: Tools for randomising the layout of samples across the well of 96
     well plates. 
 License: GPL-2
-Imports: dplyr, furrr, future, RColorBrewer, purrr, readr, stringr, tidyr 
+Imports: dplyr, furrr, future, ggplot2, purrr, RColorBrewer, readr, stringr,
+    tibble, tidyr 
 Depends: R (>= 3.6)
-VignetteBuilder: knitr
 BugReports: https://github.com/crukci-bioinformatics/PlateLayout/issues
 RoxygenNote: 6.1.1
