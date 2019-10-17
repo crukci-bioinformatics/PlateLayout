@@ -37,6 +37,7 @@ randomizeSinglePlate <- function(designSheet,
                                  nIter = 10000,
                                  nCores = 4){
     # Set parallel processing
+    options(future.supportsMulticore.unstable="quiet") # turn off warning about forking in RStudio
     if(nCores>1){ plan(multiprocess, workers = nCores) }
 
     # read sample sheet
