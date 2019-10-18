@@ -48,7 +48,7 @@ getMinScore <- function(layoutList, batchCols){
 # groups
 getCols <- function(dat, plotCol){
     len <- pull(dat, plotCol) %>% unique() %>% length()
-    if(len==2){
+    if(len<=2){
         wcols <- c("#00B6ED", "#EC008C")
     }else if(len<=12){
         wcols <- RColorBrewer::brewer.pal(len, "Set3")
