@@ -54,6 +54,13 @@ randomizeSinglePlate <- function(designSheet,
     if(any(!batchColumns%in%colnames(samsht))){
        stop("Not all of the provided 'batchColumns' are in the design sheet")
     }
+    if(nrow(samsht) > 96){
+        stop("There are too many samples in the sample sheet for a single plate")
+    }
+    if(nrow(samsht) > 94){
+        warning("There are more than 94 samples. Are you sure you do not ",
+                "want to leave wells for the Genomics positive controls?"):x
+    }
 
     # Modify batch columns
     bCols <- c(primaryGroup, batchColumns) %>%  
