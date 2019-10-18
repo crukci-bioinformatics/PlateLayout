@@ -42,7 +42,7 @@ randomizeSinglePlate <- function(designSheet,
 
     # Checks
     if(!file.exists(designSheet)){ stop("Cannot locate ", designSheet) }
-    if(length(primaryGroup > 1)) {
+    if(length(primaryGroup) > 1) {
         stop("Only specify 1 column for the 'primaryGroup'")
     }
 
