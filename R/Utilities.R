@@ -54,7 +54,9 @@ getCols <- function(dat, plotCol){
         wcols <- RColorBrewer::brewer.pal(len, "Set3")
     }else if(len<=21){
         wcols <- c(RColorBrewer::brewer.pal(12, "Set3"), 
-                   RColorBrewer::brewer.pal(len - 12, "Set1"))
+                   suppressWarnings(
+                      RColorBrewer::brewer.pal(len - 12, "Set1")
+                      ))
     }else{
         wcols <- sample(rainbow(len), len)
     }
