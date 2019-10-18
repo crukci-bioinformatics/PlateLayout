@@ -18,8 +18,6 @@
 #       (2) randomize the order of the rows
 #       (3) move any empty wells in the final column to the bottom
 
-suppressPackageStartupMessages(library(tidyverse))
-
 randomiseSampleTable <- function(dat, primaryGroup){
     # (1) randomise the order of the sample groups in the table
     # (2) randomise the order of the replicates within each group
