@@ -40,8 +40,20 @@ randomizeSinglePlate <- function(designSheet,
     options(future.supportsMulticore.unstable="quiet") # turn off warning about forking in RStudio
     if(nCores>1){ plan(multiprocess, workers = nCores) }
 
+    # Checks
+    if(!file.exists(designSheet)){ message("Cannot locate ", designSheet) }
+    if(length(primaryGroup > 1)) {
+        message("Only specify 1 column for the 'primaryGroup'")
+    }
+
     # read sample sheet
-    samsht <- read_tsv(designSheet, col_types = cols(.default = "c")) 
+    samsht <- read_tsv(designSheet, col_types = cols(.default = "c"))
+    if(!primaryGroup%in%colnames(samsht)){
+        message("'", primaryGroup, "' is not a column in the design sheet")
+    }
+    if(any(!batchColumns%in%colnames(samsht))){
+       message("Not all of the provided 'batchColumns' are in the design sheet")
+    }
 
     # Modify batch columns
     bCols <- c(primaryGroup, batchColumns) %>%  
