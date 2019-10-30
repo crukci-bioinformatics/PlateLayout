@@ -2,7 +2,7 @@
 
 ## Installation
 
-You can install patchwork from github with:
+You can install the package from github with:
 
 ``` r
 # install.packages("devtools")
