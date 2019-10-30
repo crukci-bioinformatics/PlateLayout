@@ -65,7 +65,7 @@ getCols <- function(dat, plotCol){
 
 #' Plot Plate Layout
 #'
-#' Plot the plate with wells coloured according to a column in the samplesheet
+#' Plot the plate with wells coloured according to a column in the samplesheet,
 #' if there is column called Replicate the numbers will also be printed
 #' 
 #' @param dat The plate layout tables
@@ -83,9 +83,10 @@ getCols <- function(dat, plotCol){
 #' plateLayout <- randomizeSinglePlate(designTable,  
 #'                                     batchColumns = bColumns,
 #'                                     nIter = 100) 
-#' plotPlate(plateLayout, "SampleGroup")
+#' plotPlate(plateLayout)
+#' plotPlate(plateLayout, "ExtractionInformation")
 #' @export
-plotPlate <- function(dat, plotCol, wellCols = NULL){
+plotPlate <- function(dat, plotCol = "SampleGroup", wellCols = NULL){
     nCols <- ceiling(nrow(dat)/8)
     plt <- dat %>%  
         mutate_at(plotCol, as.character) %>%  
