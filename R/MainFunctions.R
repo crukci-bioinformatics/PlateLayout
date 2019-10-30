@@ -11,17 +11,19 @@
 #' across the plate.
 #' @param nIter The number of random layouts to generate and assess.
 #' @param nCores The number of cores to use. Set to 1 to run serial.
-#' @details The sample metadata file should be a tab delimited table. The 
+#' @details The metadata (\code{designTable}) should be a data.frame/tibble. The 
 #' column names can be anything. By default the function expects one column 
 #' named \code{SampleGroup} that it will use to distribute the samples across
 #' the plate. This can be set to any other column using the \code{primaryGroup}
 #' argument.
 #' @details The columns specified in \code{batchColumns} are used in addition
 #' to \code{primaryGroup} to assess which of the \code{nIter} layouts is 
-#' optimal in terms of the distribution of samples. This assessed based on the
-#' sum of Euclidean distances between replicate samples within each column.
-#' @return Nothing. The function writes out the plate layout to a tsv file and
-#' a plot for each of `primaryGroup` and `batchColumns` to png files.
+#' optimal in terms of the distribution of samples. This is assessed based on
+#' the sum of Euclidean distances between replicate samples within each column.
+#' @return If no \code{outputFile} is provided, a tibble containing the original
+#' metadata and the well assignments for each sample. If an \code{outputFile} is
+#' provided, nothing - the function writes out the plate layout to a tsv file 
+#' and a plot for each of `primaryGroup` and `batchColumns` to png files.
 #' @examples
 #' library(readr)
 #' designSheet <- system.file("extdata", "metadata_12x3.tsv",
@@ -31,6 +33,7 @@
 #' # Create an R object in the session
 #' plateLayout <- randomizeSinglePlate(designTable,  batchColumns = bColumns,
 #'                      nIter = 100) 
+#'
 #' # Or directly output a table and plots
 #' outputFile <- "Test"
 #' randomizeSinglePlate(designTable, 
