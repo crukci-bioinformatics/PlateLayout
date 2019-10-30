@@ -113,3 +113,44 @@ outputPlatePlot <- function(batchColumn, datTab, outFileName){
     p1 <- plotPlate(datTab, batchColumn)
     ggsave(outFileName, plot = p1)
 } 
+
+################################################################################
+
+
+#' Fix metadata template
+#'
+#' Transform our CRUK CI Bioinfomratics Core metadata template into a table
+#' suitable for the PlateLayout package
+#' 
+#' @param xlsFile The metadata template Excel file
+#' @details The function takes the path for an Excel file containing completed 
+#' CRUK CI metadata template and transforms it into a tsv suitable for use with
+#' the \code{\link{randomizeSinglePlate}} function. 
+#' @details When loading the Excel file the function skips the first row, 
+#' making the headers from the second (hidden) row in the template. The third
+#' row in the template contains a contents description for each column and so
+#' is removed from the table.
+#' @details Any columns that are completely empty are removed. \code{NA} is
+#' replaced with a blank characer vector.
+#' @return The cleaned metadata as a tibble and exports a tsv version
+#' @examples
+#' metadataFile <- system.file("extdata", "metadata_template_example.xls",
+#'                            package = "PlateLayout")
+#' metadataTable <- fixMetaForm(metadataFile)
+#' metadataTable
+#' @export
+fixMetaForm <- function(xlsFile){
+  outNam <- xlsFile %>% 
+    str_replace_all(" ", "_") %>% 
+    str_replace("\\.[xls]+$", ".tsv")
+  message("Transforming '", xlsFile, "' to '", outNam, "'")
+  dat <- read_excel(xlsFile, skip=1) %>%  
+      slice(-1) %>%  
+      mutate_all(as.character) %>%  
+      rename(SampleGroup="Group") %>% 
+      select_if(~any(!is.na(.x))) %>%  
+      mutate_all(~ifelse(is.na(.x), "", .x))
+  write_tsv(dat, outNam)
+  dat
+}
+
