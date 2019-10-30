@@ -4,7 +4,7 @@
 \alias{plotPlate}
 \title{Plot Plate Layout}
 \usage{
-plotPlate(dat, plotCol, wellCols = NULL)
+plotPlate(dat, plotCol = "SampleGroup", wellCols = NULL)
 }
 \arguments{
 \item{dat}{The plate layout tables}
@@ -18,7 +18,7 @@ should match the sample groups in plotCol}
 A ggplot object
 }
 \description{
-Plot the plate with wells coloured according to a column in the samplesheet
+Plot the plate with wells coloured according to a column in the samplesheet,
 if there is column called Replicate the numbers will also be printed
 }
 \examples{
@@ -31,5 +31,6 @@ designTable <- read_tsv(designSheet)
 plateLayout <- randomizeSinglePlate(designTable,  
                                     batchColumns = bColumns,
                                     nIter = 100) 
-plotPlate(plateLayout, "SampleGroup")
+plotPlate(plateLayout)
+plotPlate(plateLayout, "ExtractionInformation")
 }
