@@ -119,13 +119,13 @@ outputPlatePlot <- function(batchColumn, datTab, outFileName){
 
 #' Fix metadata template
 #'
-#' Transform our CRUK CI Bioinfomratics Core metadata template into a table
-#' suitable for the PlateLayout package
+#' Load and transform our CRUK CI Bioinfomratics Core metadata template into a
+#' table suitable for the PlateLayout package
 #' 
 #' @param xlsFile The metadata template Excel file
 #' @details The function takes the path for an Excel file containing completed 
-#' CRUK CI metadata template and transforms it into a tsv suitable for use with
-#' the \code{\link{randomizeSinglePlate}} function. 
+#' CRUK CI metadata template and transforms it into a table suitable for use
+#' with the \code{\link{randomizeSinglePlate}} function. 
 #' @details When loading the Excel file the function skips the first row, 
 #' making the headers from the second (hidden) row in the template. The third
 #' row in the template contains a contents description for each column and so
@@ -136,10 +136,10 @@ outputPlatePlot <- function(batchColumn, datTab, outFileName){
 #' @examples
 #' metadataFile <- system.file("extdata", "metadata_template_example.xls",
 #'                            package = "PlateLayout")
-#' metadataTable <- fixMetaForm(metadataFile)
+#' metadataTable <- loadMetaForm(metadataFile)
 #' metadataTable
 #' @export
-fixMetaForm <- function(xlsFile){
+loadMetaForm <- function(xlsFile){
   outNam <- xlsFile %>% 
     str_replace_all(" ", "_") %>% 
     str_replace("\\.[xls]+$", ".tsv")

@@ -103,7 +103,7 @@ this with the `nCores` argument.
 
 #### CRUK CI Bioinformatics metadata template
 
-There is a utility script `fixMetaForm` that will load a CRUK CI Bioinformatics
+There is a utility script `loadMetaForm` that will load a CRUK CI Bioinformatics
 Core metadata template Excel file and tidy it into a table suitable for use
 with the above randomisation function.
 
