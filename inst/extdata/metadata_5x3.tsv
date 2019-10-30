@@ -1,0 +1,16 @@
+SampleName	SampleType	Organism	SampleGroup	Molecule	ExtractionInformation	PassageNumber	Sex
+GroupX_1	Cells	Mouse	GroupX	Total RNA	14_Jan	P8	Male
+GroupX_2	Cells	Mouse	GroupX	Total RNA	14_Jan	P8	Male
+GroupX_3	Cells	Mouse	GroupX	Total RNA	20_Jan	P8	Male
+GroupO_1	Cells	Mouse	GroupO	Total RNA	14_Jan	P5	Female
+GroupO_2	Cells	Mouse	GroupO	Total RNA	14_Jan	P5	Female
+GroupO_3	Cells	Mouse	GroupO	Total RNA	20_Jan	P5	Male
+K8484GFP_1	Cells	Mouse	GroupQ	Total RNA	14_Jan	P8	Female
+K8484GFP_2	Cells	Mouse	GroupQ	Total RNA	14_Jan	P8	Female
+K8484GFP_3	Cells	Mouse	GroupQ	Total RNA	20_Jan	P8	Male
+GroupK_1	Cells	Mouse	GroupK	Total RNA	14_Jan	P6	Female
+GroupK_2	Cells	Mouse	GroupK	Total RNA	14_Jan	P6	Female
+GroupK_3	Cells	Mouse	GroupK	Total RNA	20_Jan	P6	Male
+GroupM_1	Cells	Mouse	GroupM	Total RNA	14_Jan	P4	Female
+GroupM_2	Cells	Mouse	GroupM	Total RNA	14_Jan	P4	Female
+GroupM_3	Cells	Mouse	GroupM	Total RNA	20_Jan	P4	Male

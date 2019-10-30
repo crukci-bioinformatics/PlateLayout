@@ -18,8 +18,8 @@ Options:
                      'SampleGroup' - optional
     -b - <string>  - batchColumns - Columns to use to create additional plots
                      for checking batch distributions. Separate multiple
-                     columns with commas. No kneed to specify 'SampleGroup'
-                     - optional
+                     columns with commas e.g. 'Patient,SampleType'. No need to 
+                     specify 'SampleGroup' - optional
     -r - <integer> - Number of iterations to run. Default 10000 - optional
     -n - <integer> - Number of cores to use. Default 4. - optional
     -H - Show this help message and exit
@@ -53,8 +53,9 @@ hash Rscript 2>/dev/null || \
         { echo >&2 "R is not on the PATH.  Aborting."; exit 1; }
 
 # Run script
-cmd="Rscript -e 'library(PlateLayout); randomizeSinglePlate(\"${designSheet}\", 
-    outputFile=\"${outputPrefix}\""
+cmd="Rscript -e 'library(PlateLayout); library(tidyverse); 
+                 read_tsv(\"${designSheet}\") %>%
+                 randomizeSinglePlate(outputFile=\"${outputPrefix}\""
 if [[ ${primaryGroup} ]]; then cmd=${cmd}", primaryGroup=\"${primaryGroup}\""; fi
 if [[ ${batchColumns} ]]; then 
     bColVector=`echo ${batchColumns} | sed -e 's/^/c(\"/' -e 's/,/\", \"/g' -e 's/$/\")/'`

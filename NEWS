@@ -1,0 +1,10 @@
+VERSION 0.2
+------------------------
+Changed the input of randomizeSinglePlate to a table rather than a file
+Changed outputFile to optional - will return table as R object if no outputFile
+Export the plotting function
+Moved the bash script out of the R package
+Renamed example data in extdata
+VERSION 0.1
+------------------------
+Initial version - just one function: randomizeSinglePlate 

@@ -63,11 +63,33 @@ getCols <- function(dat, plotCol){
     wcols
 }
 
-# plot the plate with wells coloured according to a column in the samplesheet
-# if there is column called Replicate the numbers will also be printed
+#' Plot Plate Layout
+#'
+#' Plot the plate with wells coloured according to a column in the samplesheet
+#' if there is column called Replicate the numbers will also be printed
+#' 
+#' @param dat The plate layout tables
+#' @param plotCol The column of the table by which to colour the wells
+#' @param wellCols A named vector of columns for colouring the wells. Names
+#' should match the sample groups in plotCol
+#' @return A ggplot object
+#' @examples
+#' library(readr)
+#' designSheet <- system.file("extdata", "metadata_12x3.tsv",
+#'                            package = "PlateLayout")
+#' bColumns <- c("ExtractionInformation", "PassageNumber") 
+#' designTable <- read_tsv(designSheet)
+#' # Create an R object in the session
+#' plateLayout <- randomizeSinglePlate(designTable,  
+#'                                     batchColumns = bColumns,
+#'                                     nIter = 100) 
+#' plotPlate(plateLayout, "SampleGroup")
+#' @export
 plotPlate <- function(dat, plotCol, wellCols = NULL){
     nCols <- ceiling(nrow(dat)/8)
-    plt <- ggplot(dat, aes(x=Column, y=RowID))+
+    plt <- dat %>%  
+        mutate_at(plotCol, as.character) %>%  
+        ggplot(aes(x=Column, y=RowID))+
         geom_tile(aes_string(fill=plotCol), colour="black")  +
         scale_x_continuous(breaks=1:nCols) +
         scale_y_reverse(labels=LETTERS[1:8], breaks=c(1:8)) +
@@ -85,7 +107,7 @@ plotPlate <- function(dat, plotCol, wellCols = NULL){
     plt
 }
 
-savePlots <- function(batchColumn, datTab, outFileName){
+outputPlatePlot <- function(batchColumn, datTab, outFileName){
     outFileName  <- str_c(outFileName, ".", batchColumn, ".png")
     p1 <- plotPlate(datTab, batchColumn)
     ggsave(outFileName, plot = p1)

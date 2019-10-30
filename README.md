@@ -39,21 +39,79 @@ the layout and a table with the layout.
 
 ## Usage
 
-There is currently only one top-level command: `randomizeSinglePlate`. Please
-see the help page for details of the arguments.
+### R functions
 
-Basic usage:
+The main randomisation command is `randomizeSinglePlate`. The required input is
+the metadata table as a data.frame or tibble.
+
+By default it uses the "SampleGroup" column to optimise the layout,
+however, any other column can be used instead by specifying the argument
+`primaryGroup`, and in fact there are no required column headers.
+
+Additional columns can be passed in the `batchColumns` argument, these will be
+used to select the best layout from `nIter` random layouts.
+
+The default return value is a randomised table. You can then use `plotPlate` to
+plot the distribution of variables contained in the columns of the metadata 
+table across the plate. e.g.:
 
 ```
-randomizeSinglePlate("SampleSheet.tsv", outputFile="Final_layout")
+library(tidyverse)
+library(PlateLayout)
+
+designSheet <- system.file("extdata", 
+                           "metadata_5x3.tsv",
+                           package = "PlateLayout")
+bColumns <- c("ExtractionInformation", "PassageNumber") 
+
+plateLayout <- read_tsv(designSheet) %>%  
+               mutate(Replicate = str_extract(SampleName, "[0-9]$")) %>%  
+               mutate(SampleGroup = str_remove(SampleName, "_[0-9]$")) %>%  
+               randomizeSinglePlate(batchColumns = bColumns, nIter = 100) 
+
+pdf("Plate_Layout.5x3.pdf")
+bColumns %>%  
+    map(~plotPlate(plateLayout, plotCol = .x))
+dev.off()
+
+plateLayout %>%  
+    select(-SampleGroup, -RowID) %>%  
+    write_tsv("Plate_Layout.5x3.tsv")
 ```
 
-By default the script uses the "SampleGroup" column to optimise the layout,
-however, any other column can be used instead, and in fact there are no 
-required column headers.
+Alternatively, you can pass `randomizeSinglePlate` an output file prefix and it
+will write out the randomized plate layout as a tsv file and individual plots
+for each of the `batchColumns`.
+
+```
+designSheet <- system.file("extdata", 
+                           "metadata_12x3.tsv",
+                           package = "PlateLayout")
+bColumns <- c("ExtractionInformation", "PassageNumber") 
+outputFile <- "Plate_Layout.12x3"
+
+read_tsv(designSheet) %>%  
+    randomizeSinglePlate(outputFile = outputFile, 
+                         batchColumns = bColumns, 
+                         nIter = 100) 
+```
 
 **Note:** by default the script runs in parallel across 4 cores. You can change
 this with the `nCores` argument.
+
+### Bash script
+
+In the *bin* directory of the Git repository is a bash script `RandomizeSinglePlate.sh`
+that can be used at the command line to run the randomisation. e.g.
+
+```
+RandomizeSinglePlate.sh -d example_metadata.tsv \
+                        -o Plate_Layout \
+                        -b SampleType,Patient \
+                        -r 100
+```
+
+Please use `RandomizeSinglePlate.sh -H` for usage.
 
 ## Plate Layout Process
 

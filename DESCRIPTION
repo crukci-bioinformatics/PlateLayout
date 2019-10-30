@@ -1,8 +1,8 @@
 Package: PlateLayout
 Type: Package
 Title: Plate Layout Randomiser
-Version: 0.1
-Date: 2019-15-09
+Version: 0.2
+Date: 2019-29-09
 Authors@R: person("Sawle", "Ashley", role=c("aut", "cre"),
     email="ads2202cu@gmail.com")
 Description: Tools for randomising the layout of samples across the well of 96

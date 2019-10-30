@@ -2,8 +2,8 @@
 #'
 #' Randomize up to 96 samples across a single 96 well plate. 
 #' 
-#' @param designSheet The path to a tab delimited sample metadata file.
-#' @param outputFile The root name for the various output files.
+#' @param designTable The meta data table - a data.frame/tibble.
+#' @param outputFile The root name for the output files if required.
 #' @param primaryGroup The name of a column in the metadata table to use for
 #' optimising the distribution of samples across the plate
 #' @param batchColumns A character vector wit the names of additional columns
@@ -23,15 +23,23 @@
 #' @return Nothing. The function writes out the plate layout to a tsv file and
 #' a plot for each of `primaryGroup` and `batchColumns` to png files.
 #' @examples
-#' designSheet <- system.file("extdata", "metadata_template_TEST_12x3.tsv",
+#' library(readr)
+#' designSheet <- system.file("extdata", "metadata_12x3.tsv",
 #'                            package = "PlateLayout")
-#' outputFile <- "Test"
 #' bColumns <- c("ExtractionInformation", "PassageNumber") 
-#' randomizeSinglePlate(designSheet, outputFile, batchColumns = bColumns,
+#' designTable <- read_tsv(designSheet)
+#' # Create an R object in the session
+#' plateLayout <- randomizeSinglePlate(designTable,  batchColumns = bColumns,
+#'                      nIter = 100) 
+#' # Or directly output a table and plots
+#' outputFile <- "Test"
+#' randomizeSinglePlate(designTable, 
+#'                      outputFile = outputFile, 
+#'                      batchColumns = bColumns,
 #'                      nIter = 100) 
 #' @export
-randomizeSinglePlate <- function(designSheet, 
-                                 outputFile, 
+randomizeSinglePlate <- function(designTable, 
+                                 outputFile =  NULL, 
                                  primaryGroup = "SampleGroup", 
                                  batchColumns = NULL, 
                                  nIter = 10000,
@@ -41,23 +49,19 @@ randomizeSinglePlate <- function(designSheet,
     if(nCores>1){ plan(multiprocess, workers = nCores) }
 
     # Checks
-    if(!file.exists(designSheet)){ stop("Cannot locate ", designSheet) }
     if(length(primaryGroup) > 1) {
         stop("Only specify 1 column for the 'primaryGroup'")
     }
-
-    # read sample sheet
-    samsht <- read_tsv(designSheet, col_types = cols(.default = "c"))
-    if(!primaryGroup%in%colnames(samsht)){
+    if(!primaryGroup%in%colnames(designTable)){
         stop("'", primaryGroup, "' is not a column in the design sheet")
     }
-    if(any(!batchColumns%in%colnames(samsht))){
+    if(any(!batchColumns%in%colnames(designTable))){
        stop("Not all of the provided 'batchColumns' are in the design sheet")
     }
-    if(nrow(samsht) > 96){
+    if(nrow(designTable) > 96){
         stop("There are too many samples in the sample sheet for a single plate")
     }
-    if(nrow(samsht) > 94){
+    if(nrow(designTable) > 94){
         warning("There are more than 94 samples. Are you sure you do not ",
                 "want to leave wells for the Genomics positive controls?"):x
     }
@@ -69,7 +73,7 @@ randomizeSinglePlate <- function(designSheet,
 
     message("Run ", nIter, " random layouts")
     layouts <- future_map(1:nIter, 
-                          ~plateRandomisation(samsht, 
+                          ~plateRandomisation(designTable, 
                                               primaryGroup = primaryGroup),
                           .progress = TRUE)
 
@@ -79,13 +83,17 @@ randomizeSinglePlate <- function(designSheet,
     # Choose best layout
     finalLayout <- pluck(layouts, bestLayout)
 
-    message("Output plots and layout")
-    # Save a plot for each batch column
-    bCols %>%  
-        walk(savePlots, datTab = finalLayout, outFileName = outputFile)    
+    if(!is.null(outputFile)){
+        message("Output plots and layout")
+        # Save a plot for each batch column
+        bCols %>%  
+            walk(outputPlatePlot, datTab = finalLayout, outFileName = outputFile)    
 
-    # Write out the layout
-    finalLayout %>%  
-        select(-RowID) %>%  
-        write_tsv(str_c(outputFile, ".PlateLayout.tsv"))
+        # Write out the layout
+        finalLayout %>%  
+            select(-RowID) %>%  
+            write_tsv(str_c(outputFile, ".PlateLayout.tsv"))
+    }else{
+        return(finalLayout)
+    }
 }

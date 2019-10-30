@@ -4,14 +4,14 @@
 \alias{randomizeSinglePlate}
 \title{Randomize Single Plate}
 \usage{
-randomizeSinglePlate(designSheet, outputFile,
+randomizeSinglePlate(designTable, outputFile = NULL,
   primaryGroup = "SampleGroup", batchColumns = NULL, nIter = 10000,
   nCores = 4)
 }
 \arguments{
-\item{designSheet}{The path to a tab delimited sample metadata file.}
+\item{designTable}{The meta data table - a data.frame/tibble.}
 
-\item{outputFile}{The root name for the various output files.}
+\item{outputFile}{The root name for the output files if required.}
 
 \item{primaryGroup}{The name of a column in the metadata table to use for
 optimising the distribution of samples across the plate}
@@ -44,10 +44,18 @@ optimal in terms of the distribution of samples. This assessed based on the
 sum of Euclidean distances between replicate samples within each column.
 }
 \examples{
-designSheet <- system.file("extdata", "metadata_template_TEST_12x3.tsv",
+library(readr)
+designSheet <- system.file("extdata", "metadata_12x3.tsv",
                            package = "PlateLayout")
-outputFile <- "Test"
 bColumns <- c("ExtractionInformation", "PassageNumber") 
-randomizeSinglePlate(designSheet, outputFile, batchColumns = bColumns,
+designTable <- read_tsv(designSheet)
+# Create an R object in the session
+plateLayout <- randomizeSinglePlate(designTable,  batchColumns = bColumns,
+                     nIter = 100) 
+# Or directly output a table and plots
+outputFile <- "Test"
+randomizeSinglePlate(designTable, 
+                     outputFile = outputFile, 
+                     batchColumns = bColumns,
                      nIter = 100) 
 }
