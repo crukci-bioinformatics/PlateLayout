@@ -1,7 +1,7 @@
 Package: PlateLayout
 Type: Package
 Title: Plate Layout Randomiser
-Version: 0.2
+Version: 0.3
 Date: 2019-29-09
 Authors@R: person("Sawle", "Ashley", role=c("aut", "cre"),
     email="ads2202cu@gmail.com")
