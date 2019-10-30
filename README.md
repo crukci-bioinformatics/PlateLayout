@@ -41,6 +41,8 @@ the layout and a table with the layout.
 
 ### R functions
 
+##### Randomisation
+
 The main randomisation command is `randomizeSinglePlate`. The required input is
 the metadata table as a data.frame or tibble.
 
@@ -99,10 +101,17 @@ read_tsv(designSheet) %>%
 **Note:** by default the script runs in parallel across 4 cores. You can change
 this with the `nCores` argument.
 
+#### CRUK CI Bioinformatics metadata template
+
+There is a utility script `fixMetaForm` that will load a CRUK CI Bioinformatics
+Core metadata template Excel file and tidy it into a table suitable for use
+with the above randomisation function.
+
 ### Bash script
 
-In the *bin* directory of the Git repository is a bash script `RandomizeSinglePlate.sh`
-that can be used at the command line to run the randomisation. e.g.
+In the *bin* directory of the Git repository is a bash script
+`RandomizeSinglePlate.sh` that can be used at the command line to run the
+randomisation. e.g.
 
 ```
 RandomizeSinglePlate.sh -d example_metadata.tsv \
