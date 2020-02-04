@@ -23,7 +23,7 @@ randomistation is then delivered.
 The script uses one column, defined by the `primaryGroup` argument (by default
 "SampleGroup"), for the optimisation/randomistaion process. If there are known
 batches or other factors of interest in the experiment (e.g. different
-extraction dates, sex etc.) the optimisation part of script is agnostic of
+extraction dates, sex etc.) the optimisation part of script does not consider
 these, however, they can be considered in the scoring of each random layout via
 the `batchColumns` argument.
 
