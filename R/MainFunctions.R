@@ -66,7 +66,7 @@ randomizeSinglePlate <- function(designTable,
     }
     if(nrow(designTable) > 94){
         warning("There are more than 94 samples. Are you sure you do not ",
-                "want to leave wells for the Genomics positive controls?"):x
+                "want to leave wells for the Genomics positive controls?")
     }
 
     # Modify batch columns
