@@ -49,7 +49,7 @@ randomizeSinglePlate <- function(designTable,
                                  nCores = 4){
     # Set parallel processing
     options(future.supportsMulticore.unstable="quiet") # turn off warning about forking in RStudio
-    if(nCores>1){ plan(multiprocess, workers = nCores) }
+    if(nCores>1){ plan(multicore, workers = nCores) }
 
     # Checks
     if(length(primaryGroup) > 1) {
