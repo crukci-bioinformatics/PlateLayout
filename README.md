@@ -17,7 +17,7 @@ This package takes an experimental design table and generates a
 The package optimises the layout of the plate, and then randomises the columns
 and rows. The randomisation process is carried out multiple times and the
 distance between replicate samples is used to score each randomistation to see
-how well distributed/badly clumpled each sample group is. The "best"
+how well distributed/badly clumped each sample group is. The "best"
 randomistation is then delivered.
 
 The script uses one column, defined by the `primaryGroup` argument (by default
