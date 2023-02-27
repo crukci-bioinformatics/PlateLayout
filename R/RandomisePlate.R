@@ -42,7 +42,7 @@ addWells <- function(dat){
            filter(ColNum <= nCols) %>% # remove dummy columns
            rowid_to_column("WellNumber") %>%
            arrange(ColNum, RowNum) %>%  
-           slice(n = seq(nSams)) %>%  # remove empty wells in final col
+           slice(seq(nSams)) %>%  # remove empty wells in final col
            arrange(WellNumber) %>%  
            select(-WellNumber) %>%
            bind_cols(dat)
