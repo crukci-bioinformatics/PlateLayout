@@ -1,3 +1,7 @@
+VERSION 0.3.3
+------------------------
+Add option to switch off warning message about the RNG and future
+Modify slice for new argument syntax
 VERSION 0.3.2
 ------------------------
 Update `multiprocess` to `multicore`
