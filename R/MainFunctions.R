@@ -75,10 +75,12 @@ randomizeSinglePlate <- function(designTable,
         unique()
 
     message("Run ", nIter, " random layouts")
+    options(future.rng.onMisuse = "ignore")
     layouts <- future_map(1:nIter, 
                           ~plateRandomisation(designTable, 
                                               primaryGroup = primaryGroup),
-                          .progress = TRUE)
+                          .progress = TRUE,
+                          seed = TRUE)
 
     message("Calculate distribution scores for each layout and find best layout")
     bestLayout <- getMinScore(layouts, bCols)
