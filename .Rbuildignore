@@ -2,3 +2,5 @@ README.md
 bin
 bin/RandomizeSinglePlate.sh
 bin/example_metadata.tsv
+^.*\.Rproj$
+^\.Rproj\.user$
